@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import styles from "./styles.scss";
-import worm from "./worm.svg";
 
 import Graph from "../Graph";
 import Scrollyteller from "@abcnews/scrollyteller";
