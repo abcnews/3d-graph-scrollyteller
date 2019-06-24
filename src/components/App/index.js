@@ -15,11 +15,7 @@ export default ({ panels, projectName }) => {
         setMarker(marker);
       }}
     >
-      <div className={styles.root}>
-        <img className={styles.worm} src={worm} />
-        <h1>{projectName}</h1>
-        <Graph />
-      </div>
+      <Graph />
     </Scrollyteller>
   );
 };
