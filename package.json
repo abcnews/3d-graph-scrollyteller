@@ -17,7 +17,8 @@
   "devDependencies": {
     "@abcnews/aunty": "^10.5.1",
     "fpsmeter": "^0.3.1",
-    "react-test-renderer": "^16.8.6"
+    "react-test-renderer": "^16.8.6",
+    "stats.js": "^0.17.0"
   },
   "dependencies": {
     "@abcnews/scrollyteller": "^1.4.4",
