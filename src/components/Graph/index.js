@@ -4,10 +4,13 @@ import {
   Scene,
   PerspectiveCamera,
   CircleGeometry,
+  Line,
   WebGLRenderer,
   MeshBasicMaterial,
+  LineBasicMaterial,
   Vector3,
-  Mesh
+  Mesh,
+  Geometry
 } from "three";
 
 import * as THREE from "three";
@@ -18,7 +21,8 @@ import {
   forceSimulation,
   forceLink,
   forceManyBody,
-  forceCenter
+  forceCenter,
+  forceCollide
 } from "d3-force-3d";
 
 import { tsv } from "d3-fetch";
@@ -32,9 +36,17 @@ const renderer = new WebGLRenderer();
 // const controls = new OrbitControls(camera, renderer.domElement);
 const origin = new Vector3();
 
-camera.position.z = 5;
+camera.position.z = 500;
 renderer.setSize(width, height);
 renderer.setPixelRatio(window.devicePixelRatio);
+
+const linkForce = forceLink();
+const simulation = forceSimulation([], 3)
+  .force("link", linkForce.distance(30))
+  .force("charge", forceManyBody().strength(-30))
+  .force("center", forceCenter())
+  .force("colide", forceCollide(10))
+  .stop();
 
 Promise.all([tsv("/data/edges.tsv"), tsv("/data/nodes.tsv")]).then(
   ([edges, nodes]) => {
@@ -45,10 +57,8 @@ Promise.all([tsv("/data/edges.tsv"), tsv("/data/nodes.tsv")]).then(
     }));
     edges = edges.map(e => ({ source: +e.Source - 1, target: +e.Target - 1 }));
 
-    const simulation = forceSimulation(nodes, 3)
-      .force("link", forceLink(edges))
-      .force("charge", forceManyBody())
-      .force("center", forceCenter());
+    simulation.nodes(nodes);
+    linkForce.links(edges);
 
     nodes.forEach(node => {
       const geometry = new CircleGeometry(5, 32);
@@ -68,12 +78,34 @@ Promise.all([tsv("/data/edges.tsv"), tsv("/data/nodes.tsv")]).then(
       node.material = material;
     });
 
-    animate(nodes);
+    edges.forEach(edge => {
+      const geometry = new Geometry();
+      const material = new LineBasicMaterial({
+        color: 0x00ff00,
+        linewidth: 100
+      });
+
+      geometry.vertices.push(
+        new Vector3(edge.source.x, edge.source.y, edge.source.z),
+        new Vector3(edge.target.x, edge.target.y, edge.target.z)
+      );
+
+      const line = new Line(geometry, material);
+
+      scene.add(line);
+
+      edge.obj = line;
+      edge.material = material;
+      edge.geometry = geometry;
+    });
+
+    animate(nodes, edges);
   }
 );
 
-function animate(nodes) {
+function animate(nodes, edges) {
   let rafRef;
+  let lastScrollPct = null;
 
   const node1 = nodes[Math.floor(nodes.length * Math.random())];
   const node2 = nodes[Math.floor(nodes.length * Math.random())];
@@ -81,19 +113,36 @@ function animate(nodes) {
   const initialBearing = {
     origin: node1.obj.position,
     angle: 180,
-    distance: 200
+    distance: 500
   };
   const targetBearing = {
     origin: node2.obj.position,
     angle: 20,
-    distance: 150
+    distance: 200
   };
+
+  let linesDrawn = false;
 
   const loop = () => {
     // TODO: replace this abomination with the proper scroll checking from Odyssey/Scrollyteller
     const scrollPercent =
       window.scrollY /
       (document.documentElement.scrollHeight - window.innerHeight);
+
+    // Don't re-render on every frame, you fool.
+    if (
+      lastScrollPct === scrollPercent &&
+      simulation.alpha() <= simulation.alphaMin()
+    ) {
+      rafRef = requestAnimationFrame(loop);
+      return;
+    }
+
+    if (simulation.alpha() > simulation.alphaMin()) {
+      simulation.tick();
+    }
+
+    lastScrollPct = scrollPercent;
 
     // Calculate our lerped bearing
     const bearing = {
@@ -127,6 +176,15 @@ function animate(nodes) {
     // Make sure the nodes face the camera
     nodes.forEach(n => {
       n.obj.lookAt(camera.position);
+      n.obj.position.set(n.x, n.y, n.z);
+    });
+
+    edges.forEach(e => {
+      e.geometry.vertices = [
+        new Vector3(e.source.x, e.source.y, e.source.z),
+        new Vector3(e.target.x, e.target.y, e.target.z)
+      ];
+      e.geometry.verticesNeedUpdate = true;
     });
 
     renderer.render(scene, camera);
