@@ -77,7 +77,8 @@ export default class Canvas {
       const geometry = new Geometry();
       const material = new LineBasicMaterial({
         color: 0x00ff00,
-        linewidth: 100
+        linewidth: 100,
+        transparent: true
       });
 
       geometry.vertices.push(
@@ -149,7 +150,6 @@ export default class Canvas {
         fold + targetPanelBox.height - targetPanelBox.bottom
       );
 
-      // Prevent accidental divide by zero
       const progress =
         pixelsAboveFold / (panelSeparation + targetPanelBox.height);
 
@@ -177,19 +177,32 @@ export default class Canvas {
       // node1.material.opacity = 1 - progress;
       // node2.material.opacity = progress;
 
-      // Make sure the nodes face the camera
+      // Modify nodes
       nodes.forEach(n => {
+        // Make sure the nodes face the camera
         n.obj.lookAt(camera.position);
+
+        // Move it
         n.obj.position.set(n.x, n.y, n.z);
+
+        // Set highlight flag
+        n.highlight = n.groups.includes(targetPanel.config.highlight);
+
+        // Highlight
+        n.material.opacity = n.highlight ? 1 : 0.2;
       });
 
-      // Repositionn the edges
+      // Update the edges
       edges.forEach(e => {
+        // Reposition
         e.geometry.vertices = [
           new Vector3(e.source.x, e.source.y, e.source.z),
           new Vector3(e.target.x, e.target.y, e.target.z)
         ];
         e.geometry.verticesNeedUpdate = true;
+
+        // Highlight
+        e.material.opacity = e.source.highlight && e.target.highlight ? 1 : 0.2;
       });
 
       this.positionCamera(displayBearing);

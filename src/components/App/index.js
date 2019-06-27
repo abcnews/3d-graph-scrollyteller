@@ -11,13 +11,14 @@ export default ({ panels }) => {
   const [edges, setEdges] = useState();
 
   useEffect(() => {
-    Promise.all([tsv("/data/nodes.tsv"), tsv("/data/edges.tsv")]).then(
+    Promise.all([tsv("/data/nodes-grouped.tsv"), tsv("/data/edges.tsv")]).then(
       ([nodes, edges]) => {
         setNodes(
           nodes.map(n => ({
             id: +n.ID - 1,
             label: n.Label,
-            type: n.Category
+            type: n.Category,
+            groups: n.Groups.split(",").map(g => g.trim())
           }))
         );
         setEdges(
