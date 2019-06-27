@@ -3,12 +3,16 @@ import PropTypes from "prop-types";
 import styles from "./styles.scss";
 import Canvas from "./canvas";
 
-const Graph = ({ nodes, edges, waypoint }) => {
+const Graph = ({ nodes, edges, panels }) => {
   const domNode = useRef();
   const canvas = useRef();
 
+  console.info("Graph re-render");
+  console.log("panels", panels);
+
   useEffect(() => {
-    canvas.current = new Canvas(nodes, edges);
+    console.info("Creating canvas");
+    canvas.current = new Canvas(nodes, edges, panels);
     return () => canvas.current.dispose();
   }, [nodes, edges, canvas]);
 
@@ -23,7 +27,7 @@ const Graph = ({ nodes, edges, waypoint }) => {
 Graph.propTypes = {
   nodes: PropTypes.array.required,
   edges: PropTypes.array.required,
-  waypoint: PropTypes.object
+  panels: PropTypes.array.required
 };
 
 export default Graph;

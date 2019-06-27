@@ -33,9 +33,14 @@ export default ({ panels }) => {
       onMarker={marker => {
         setMarker(marker);
       }}
+      scrollTween={(progress, panel, px) => {
+        // console.log("progress", progress);
+        // console.log("panel", panel);
+        // console.log("px", px);
+      }}
     >
       {nodes && edges ? (
-        <Graph nodes={nodes} edges={edges} waypoint={marker} />
+        <Graph nodes={nodes} edges={edges} panels={panels} />
       ) : null}
     </Scrollyteller>
   );

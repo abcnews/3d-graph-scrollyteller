@@ -24,7 +24,7 @@ import {
 } from "d3-force-3d";
 
 export default class Canvas {
-  constructor(nodes, edges, opts = {}) {
+  constructor(nodes, edges, panels, opts = {}) {
     opts = Object.assign(
       {},
       {
@@ -96,38 +96,72 @@ export default class Canvas {
 
     this.nodes = nodes;
     this.edges = edges;
+    this.panels = panels;
 
-    this.animate();
+    this.loop = this.start();
   }
 
-  animate() {
+  start() {
     let rafRef;
-    let lastScrollPct = null;
+    let lastProgress = null;
 
-    const node1 = this.nodes[Math.floor(this.nodes.length * Math.random())];
-    const node2 = this.nodes[Math.floor(this.nodes.length * Math.random())];
+    // Work out which panel is the current one
+    const fold = window.innerHeight * 0.8;
+
+    const panels = this.panels.map(p => ({
+      ...p,
+      element: p.nodes[0].parentElement
+    }));
+
+    const panelSeparation = getPanelSeparation(
+      panels[0].element,
+      panels[1].element
+    );
 
     const initialBearing = {
-      origin: node1.obj.position,
-      angle: 180,
+      origin: { x: 0, y: 0, z: 0 },
+      angle: 0,
       distance: 500
-    };
-    const targetBearing = {
-      origin: node2.obj.position,
-      angle: 20,
-      distance: 200
     };
 
     const loop = () => {
       const { nodes, edges, renderer, camera, simulation } = this;
       // TODO: replace this abomination with the proper scroll checking from Odyssey/Scrollyteller
-      const scrollPercent =
-        window.scrollY /
-        (document.documentElement.scrollHeight - window.innerHeight);
+
+      const panelsAboveTheFold = panels.filter(panel => {
+        if (!panel.element) return false;
+        const box = panel.element.getBoundingClientRect();
+        return box.height !== 0 && box.top < fold;
+      });
+
+      const targetPanelIndex = panelsAboveTheFold.length - 1;
+      const targetPanel = panelsAboveTheFold[targetPanelIndex] || panels[0];
+
+      const previousPanel = panels[targetPanelIndex - 1];
+
+      const targetBearing = this.bearingFromConfig(targetPanel.config);
+      const previousBearing = previousPanel
+        ? this.bearingFromConfig(previousPanel.config)
+        : initialBearing;
+
+      const targetPanelBox = targetPanel.element.getBoundingClientRect();
+      const pixelsAboveFold = Math.ceil(
+        fold + targetPanelBox.height - targetPanelBox.bottom
+      );
+
+      // Prevent accidental divide by zero
+      const progress =
+        pixelsAboveFold / (panelSeparation + targetPanelBox.height);
+
+      const displayBearing = lerpedBearing(
+        previousBearing,
+        targetBearing,
+        progress
+      );
 
       // Don't re-render on every frame, you fool.
       if (
-        lastScrollPct === scrollPercent &&
+        lastProgress === progress &&
         simulation.alpha() <= simulation.alphaMin()
       ) {
         rafRef = requestAnimationFrame(loop);
@@ -138,36 +172,10 @@ export default class Canvas {
         simulation.tick();
       }
 
-      lastScrollPct = scrollPercent;
+      lastProgress = progress;
 
-      // Calculate our lerped bearing
-      const bearing = {
-        origin: new Vector3(
-          initialBearing.origin.x +
-            (targetBearing.origin.x - initialBearing.origin.x) * scrollPercent,
-          initialBearing.origin.y +
-            (targetBearing.origin.y - initialBearing.origin.y) * scrollPercent,
-          initialBearing.origin.z +
-            (targetBearing.origin.z - initialBearing.origin.z) * scrollPercent
-        ),
-        angle:
-          initialBearing.angle +
-          (targetBearing.angle - initialBearing.angle) * scrollPercent,
-        distance:
-          initialBearing.distance +
-          (targetBearing.distance - initialBearing.distance) * scrollPercent
-      };
-
-      const rad = (bearing.angle * Math.PI) / 180;
-      const distance = bearing.distance;
-
-      node1.material.opacity = 1 - scrollPercent;
-      node2.material.opacity = scrollPercent;
-
-      camera.position.x = bearing.origin.x + Math.cos(rad) * distance;
-      camera.position.z = bearing.origin.z + Math.sin(rad) * distance;
-      camera.position.y = bearing.origin.y + distance / 2;
-      camera.lookAt(bearing.origin);
+      // node1.material.opacity = 1 - progress;
+      // node2.material.opacity = progress;
 
       // Make sure the nodes face the camera
       nodes.forEach(n => {
@@ -175,6 +183,7 @@ export default class Canvas {
         n.obj.position.set(n.x, n.y, n.z);
       });
 
+      // Repositionn the edges
       edges.forEach(e => {
         e.geometry.vertices = [
           new Vector3(e.source.x, e.source.y, e.source.z),
@@ -183,6 +192,7 @@ export default class Canvas {
         e.geometry.verticesNeedUpdate = true;
       });
 
+      this.positionCamera(displayBearing);
       renderer.render(this.scene, this.camera);
       rafRef = requestAnimationFrame(loop);
     };
@@ -196,9 +206,29 @@ export default class Canvas {
     return loop;
   }
 
+  positionCamera(bearing) {
+    const { camera } = this;
+    const { angle, origin, distance } = bearing;
+    const rad = (angle * Math.PI) / 180;
+
+    camera.position.x = origin.x + Math.cos(rad) * distance;
+    camera.position.z = origin.z + Math.sin(rad) * distance;
+    camera.position.y = origin.y + distance / 2;
+    camera.lookAt(origin);
+  }
+
+  stop() {
+    console.info("Stop");
+    this.loop && this.loop.stop();
+  }
+
   setSize(width, height) {
     this.camera.aspect = width / height;
     this.renderer.setSize(width, height);
+  }
+
+  setPanels(panels) {
+    this.panels = panels;
   }
 
   getRenderer() {
@@ -206,6 +236,7 @@ export default class Canvas {
   }
 
   dispose() {
+    this.stop();
     console.info("Dispose");
     const { nodes, edges, scene, renderer } = this;
     nodes.forEach(n => {
@@ -219,4 +250,47 @@ export default class Canvas {
     scene.dispose();
     renderer.dispose();
   }
+
+  bearingFromConfig(config) {
+    const { origin, angle, distance, x, y, z } = config;
+    const node = this.nodes.find(
+      (node, idx) => idx === +origin || node.label === origin
+    ) || { x: 0, y: 0, z: 0 };
+
+    return {
+      origin: { x: x || node.x || 0, y: y || node.y || 0, z: z || node.z || 0 },
+      angle: +angle || 0,
+      distance: +distance || 500
+    };
+  }
+}
+
+// func:
+// 	position:
+// 		origin:
+// 			nodeIndex
+// 			nodeName
+// 			x,y,z
+// 			default: 0,0,0
+// 	rotate:
+
+function lerpedBearing(a, b, pct) {
+  return {
+    origin: new Vector3(
+      a.origin.x + (b.origin.x - a.origin.x) * pct,
+      a.origin.y + (b.origin.y - a.origin.y) * pct,
+      a.origin.z + (b.origin.z - a.origin.z) * pct
+    ),
+    angle: a.angle + (b.angle - a.angle) * pct,
+    distance: a.distance + (b.distance - a.distance) * pct
+  };
+}
+
+function getPanelSeparation(a, b) {
+  // Panel separation so we can later calculate the percentage for tween accurately
+  const aBox = a.getBoundingClientRect();
+  const bBox = b.getBoundingClientRect();
+
+  // In case there is only one panel estimate the separation
+  return bBox.top - aBox.bottom;
 }
