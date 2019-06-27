@@ -56,12 +56,15 @@ export default class Canvas {
 
     nodes.forEach(node => {
       const geometry = new CircleGeometry(5, 32);
-      const material = new MeshBasicMaterial({ color: 0xffff00 });
+      const material = new MeshBasicMaterial({
+        color: 0xffff00,
+        depthTest: false,
+        transparent: true,
+        opacity: 0.2
+      });
       const circle = new Mesh(geometry, material);
 
-      material.transparent = true;
-      material.opacity = 0.2;
-
+      circle.renderOrder = 1;
       circle.translateX(node.x);
       circle.translateY(node.y);
       circle.translateZ(node.z);
@@ -78,7 +81,8 @@ export default class Canvas {
       const material = new LineBasicMaterial({
         color: 0x00ff00,
         linewidth: 100,
-        transparent: true
+        transparent: true,
+        depthTest: false
       });
 
       geometry.vertices.push(
@@ -87,6 +91,8 @@ export default class Canvas {
       );
 
       const line = new Line(geometry, material);
+
+      line.renderOrder = 0;
 
       this.scene.add(line);
 
