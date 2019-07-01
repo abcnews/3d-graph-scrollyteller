@@ -6,7 +6,6 @@ import Scrollyteller from "@abcnews/scrollyteller";
 import { csv } from "d3-fetch";
 
 export default ({ panels, nodeData, edgeData, groupData }) => {
-  const [marker, setMarker] = useState();
   const [nodes, setNodes] = useState();
   const [edges, setEdges] = useState();
 
@@ -37,18 +36,9 @@ export default ({ panels, nodeData, edgeData, groupData }) => {
       .catch(console.error);
   }, []);
 
+  // TODO: Add loading indicator
   return (
-    <Scrollyteller
-      panels={panels}
-      onMarker={marker => {
-        setMarker(marker);
-      }}
-      scrollTween={(progress, panel, px) => {
-        // console.log("progress", progress);
-        // console.log("panel", panel);
-        // console.log("px", px);
-      }}
-    >
+    <Scrollyteller panels={panels}>
       {nodes && edges ? (
         <Graph nodes={nodes} edges={edges} panels={panels} />
       ) : null}
