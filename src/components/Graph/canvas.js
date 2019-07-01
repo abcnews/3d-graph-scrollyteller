@@ -68,7 +68,7 @@ export default class Canvas {
       });
       const circle = new Mesh(geometry, material);
 
-      circle.on('mousemove', e => {
+      circle.on('mouseover', e => {
         // TODO: actually disply some kind of highlight and 
         //      text box for the hovered data
         circle.material = new MeshBasicMaterial({
@@ -90,6 +90,9 @@ export default class Canvas {
 
       circle.on('mouseout', e => {
         circle.material = material;
+        // TODO: this should be batched so we aren't calling render
+        //        multiple times for the same frame
+        this.renderer.render(this.scene, this.camera);
       });
 
       circle.renderOrder = 1;
