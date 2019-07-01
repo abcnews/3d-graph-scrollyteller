@@ -10,6 +10,7 @@ import {
   Mesh,
   Geometry
 } from "three";
+import { Interaction } from 'three.interaction';
 
 import { easePoly } from "d3-ease";
 
@@ -38,12 +39,18 @@ export default class Canvas {
       opts
     );
 
-    const { width, height, pixelRatio } = opts;
+    const { width, height, pixelRatio } = opts; 
+
+    // Batch multiple render calls (eg. from hover events)
+    this.needsRender = false;
 
     // THREE instances
     this.scene = new Scene();
     this.camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
     this.renderer = new WebGLRenderer();
+
+    // For some reason Interaction is applied via a constructor
+    new Interaction(this.renderer, this.scene, this.camera);
 
     // this.controls = new OrbitControls(camera, renderer.domElement);
     this.setSize(width, height);
@@ -69,6 +76,31 @@ export default class Canvas {
         opacity: 0.2
       });
       const circle = new Mesh(geometry, material);
+
+      circle.on('mouseover', e => {
+        // TODO: actually disply some kind of highlight and 
+        //      text box for the hovered data
+        circle.material = new MeshBasicMaterial({
+          color: 0xff0000,
+          depthTest: false,
+          transparent: true,
+          opacity: 1
+        });
+
+        const mouseEvent = e.data.originalEvent;
+
+        console.log('mouse:', mouseEvent.clientX, mouseEvent.clientY);
+        console.log(node.label, '-', node.type);
+        
+        // Batch render calls
+        this.needsRender = true;
+      });
+
+      circle.on('mouseout', e => {
+        circle.material = material;
+        // Batch render callss
+        this.needsRender = true;
+      });
 
       circle.renderOrder = 1;
       circle.translateX(node.x);
@@ -174,6 +206,7 @@ export default class Canvas {
 
       // Don't re-render on every frame, you fool.
       if (
+        this.needsRender === false &&
         lastProgress === progress &&
         simulation.alpha() <= simulation.alphaMin()
       ) {
