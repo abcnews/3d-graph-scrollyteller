@@ -38,6 +38,9 @@ export default class Canvas {
 
     const { width, height, pixelRatio } = opts; 
 
+    // Batch multiple render calls (eg. from hover events)
+    this.needsRender = false;
+
     // THREE instances
     this.scene = new Scene();
     this.camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
@@ -82,17 +85,15 @@ export default class Canvas {
 
         console.log('mouse:', mouseEvent.clientX, mouseEvent.clientY);
         console.log(node.label, '-', node.type);
-
-        // TODO: this should be batched so we aren't calling render
-        //        multiple times for the same frame
-        this.renderer.render(this.scene, this.camera);
+        
+        // Batch render calls
+        this.needsRender = true;
       });
 
       circle.on('mouseout', e => {
         circle.material = material;
-        // TODO: this should be batched so we aren't calling render
-        //        multiple times for the same frame
-        this.renderer.render(this.scene, this.camera);
+        // Batch render callss
+        this.needsRender = true;
       });
 
       circle.renderOrder = 1;
@@ -198,6 +199,7 @@ export default class Canvas {
 
       // Don't re-render on every frame, you fool.
       if (
+        this.needsRender === false &&
         lastProgress === progress &&
         simulation.alpha() <= simulation.alphaMin()
       ) {
