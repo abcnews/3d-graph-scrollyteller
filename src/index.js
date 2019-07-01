@@ -15,7 +15,13 @@ const scrollyData = loadOdysseyScrollyteller(
 
 function init() {
   render(
-    <App panels={scrollyData.panels} projectName={PROJECT_NAME} />,
+    <App
+      panels={scrollyData.panels}
+      projectName={PROJECT_NAME}
+      nodeData={root.dataset.nodes}
+      edgeData={root.dataset.edges}
+      groupData={root.dataset.groups}
+    />,
     scrollyData.mountNode
   );
 }

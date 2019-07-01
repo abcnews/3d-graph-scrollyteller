@@ -5,27 +5,34 @@ import Graph from "../Graph";
 import Scrollyteller from "@abcnews/scrollyteller";
 import { tsv } from "d3-fetch";
 
-export default ({ panels }) => {
+export default ({ panels, nodeData, edgeData, groupData }) => {
   const [marker, setMarker] = useState();
   const [nodes, setNodes] = useState();
   const [edges, setEdges] = useState();
 
   useEffect(() => {
-    Promise.all([tsv("/data/nodes-grouped.tsv"), tsv("/data/edges.tsv")]).then(
-      ([nodes, edges]) => {
+    Promise.all([tsv(nodeData), tsv(edgeData), tsv(groupData)])
+      .then(([nodes, edges, groups]) => {
         setNodes(
           nodes.map(n => ({
             id: +n.ID - 1,
             label: n.Label,
             type: n.Category,
-            groups: n.Groups.split(",").map(g => g.trim())
+            groups: groups.map(group => {
+              return group.membership
+                .split(",")
+                .map(m => m.trim())
+                .includes(n.Label)
+                ? group.name.toLowerCase()
+                : undefined;
+            })
           }))
         );
         setEdges(
           edges.map(e => ({ source: +e.Source - 1, target: +e.Target - 1 }))
         );
-      }
-    );
+      })
+      .catch(console.error);
   }, []);
 
   return (
