@@ -10,6 +10,7 @@ import {
   Mesh,
   Geometry
 } from "three";
+import { Interaction } from 'three.interaction';
 
 import * as THREE from "three";
 
@@ -35,12 +36,15 @@ export default class Canvas {
       opts
     );
 
-    const { width, height, pixelRatio } = opts;
+    const { width, height, pixelRatio } = opts; 
 
     // THREE instances
     this.scene = new Scene();
     this.camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
     this.renderer = new WebGLRenderer();
+
+    // For some reason Interaction is applied via a constructor
+    new Interaction(this.renderer, this.scene, this.camera);
 
     // this.controls = new OrbitControls(camera, renderer.domElement);
     this.setSize(width, height);
@@ -63,6 +67,30 @@ export default class Canvas {
         opacity: 0.2
       });
       const circle = new Mesh(geometry, material);
+
+      circle.on('mousemove', e => {
+        // TODO: actually disply some kind of highlight and 
+        //      text box for the hovered data
+        circle.material = new MeshBasicMaterial({
+          color: 0xff0000,
+          depthTest: false,
+          transparent: true,
+          opacity: 1
+        });
+
+        const mouseEvent = e.data.originalEvent;
+
+        console.log('mouse:', mouseEvent.clientX, mouseEvent.clientY);
+        console.log(node.label, '-', node.type);
+
+        // TODO: this should be batched so we aren't calling render
+        //        multiple times for the same frame
+        this.renderer.render(this.scene, this.camera);
+      });
+
+      circle.on('mouseout', e => {
+        circle.material = material;
+      });
 
       circle.renderOrder = 1;
       circle.translateX(node.x);
