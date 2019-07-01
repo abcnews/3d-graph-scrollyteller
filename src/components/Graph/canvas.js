@@ -11,8 +11,6 @@ import {
   Geometry
 } from "three";
 
-import * as THREE from "three";
-
 import { OrbitControls } from "../../lib/OrbitControls";
 
 import {
