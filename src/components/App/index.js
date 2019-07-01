@@ -17,12 +17,12 @@ export default ({ panels, nodeData, edgeData, groupData }) => {
             id: +n.ID - 1,
             label: n.Label,
             type: n.Category,
-            groups: groups.map(group => {
-              return group.membership
+            groups: groups.map(({ membership, name }) => {
+              return membership
                 .split(",")
                 .map(m => m.trim())
                 .includes(n.Label)
-                ? group.name.toLowerCase()
+                ? name.toLowerCase()
                 : undefined;
             })
           }))

@@ -13,6 +13,9 @@ const Graph = ({ nodes, edges, panels }) => {
   useEffect(() => {
     console.info("Creating canvas");
     canvas.current = new Canvas(nodes, edges, panels);
+    window.toggleAxesHelper = () => {
+      canvas.current.toggleAxesHelper();
+    };
     return () => canvas.current.dispose();
   }, [nodes, edges, canvas]);
 

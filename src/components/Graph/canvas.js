@@ -8,9 +8,10 @@ import {
   LineBasicMaterial,
   Vector3,
   Mesh,
-  Geometry
+  Geometry,
+  AxesHelper
 } from "three";
-import { Interaction } from 'three.interaction';
+import { Interaction } from "three.interaction";
 
 import { easePoly } from "d3-ease";
 
@@ -39,7 +40,7 @@ export default class Canvas {
       opts
     );
 
-    const { width, height, pixelRatio } = opts; 
+    const { width, height, pixelRatio } = opts;
 
     // Batch multiple render calls (eg. from hover events)
     this.needsRender = false;
@@ -77,8 +78,8 @@ export default class Canvas {
       });
       const circle = new Mesh(geometry, material);
 
-      circle.on('mouseover', e => {
-        // TODO: actually disply some kind of highlight and 
+      circle.on("mouseover", e => {
+        // TODO: actually disply some kind of highlight and
         //      text box for the hovered data
         circle.material = new MeshBasicMaterial({
           color: 0xff0000,
@@ -89,14 +90,14 @@ export default class Canvas {
 
         const mouseEvent = e.data.originalEvent;
 
-        console.log('mouse:', mouseEvent.clientX, mouseEvent.clientY);
-        console.log(node.label, '-', node.type);
-        
+        console.log("mouse:", mouseEvent.clientX, mouseEvent.clientY);
+        console.log(node.label, "-", node.type);
+
         // Batch render calls
         this.needsRender = true;
       });
 
-      circle.on('mouseout', e => {
+      circle.on("mouseout", e => {
         circle.material = material;
         // Batch render callss
         this.needsRender = true;
@@ -364,6 +365,16 @@ export default class Canvas {
       angle: +angle || 0,
       distance: +distance || 500
     };
+  }
+
+  toggleAxesHelper() {
+    if (this.axesHelper) {
+      this.scene.remove(this.axesHelper);
+      this.axesHelper = null;
+    } else {
+      this.axesHelper = new AxesHelper(5000);
+      this.scene.add(this.axesHelper);
+    }
   }
 }
 
