@@ -20,6 +20,9 @@ import {
   forceLink,
   forceManyBody,
   forceCenter,
+  forceX,
+  forceY,
+  forceZ,
   forceCollide
 } from "d3-force-3d";
 
@@ -49,9 +52,12 @@ export default class Canvas {
     // Force layout
     this.simulation = forceSimulation(nodes, 3)
       .force("link", forceLink(edges).distance(30))
-      .force("charge", forceManyBody().strength(-30))
-      .force("center", forceCenter())
-      .force("colide", forceCollide(10))
+      .force("charge", forceManyBody().strength(-100))
+      // .force("center", forceCenter())
+      .force("x", forceX())
+      .force("y", forceY())
+      .force("z", forceZ())
+      .force("collide", forceCollide(10))
       .stop();
 
     nodes.forEach(node => {

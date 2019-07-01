@@ -3,7 +3,7 @@ import styles from "./styles.scss";
 
 import Graph from "../Graph";
 import Scrollyteller from "@abcnews/scrollyteller";
-import { tsv } from "d3-fetch";
+import { csv } from "d3-fetch";
 
 export default ({ panels, nodeData, edgeData, groupData }) => {
   const [marker, setMarker] = useState();
@@ -11,7 +11,7 @@ export default ({ panels, nodeData, edgeData, groupData }) => {
   const [edges, setEdges] = useState();
 
   useEffect(() => {
-    Promise.all([tsv(nodeData), tsv(edgeData), tsv(groupData)])
+    Promise.all([csv(nodeData), csv(edgeData), csv(groupData)])
       .then(([nodes, edges, groups]) => {
         setNodes(
           nodes.map(n => ({
@@ -29,7 +29,9 @@ export default ({ panels, nodeData, edgeData, groupData }) => {
           }))
         );
         setEdges(
-          edges.map(e => ({ source: +e.Source - 1, target: +e.Target - 1 }))
+          edges
+            .filter(e => e.Source !== "#N/A" && e.Target !== "#N/A")
+            .map(e => ({ source: +e.Source - 1, target: +e.Target - 1 }))
         );
       })
       .catch(console.error);

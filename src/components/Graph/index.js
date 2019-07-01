@@ -25,9 +25,9 @@ const Graph = ({ nodes, edges, panels }) => {
 };
 
 Graph.propTypes = {
-  nodes: PropTypes.array.required,
-  edges: PropTypes.array.required,
-  panels: PropTypes.array.required
+  nodes: PropTypes.array.isRequired,
+  edges: PropTypes.array.isRequired,
+  panels: PropTypes.array.isRequired
 };
 
 export default Graph;
