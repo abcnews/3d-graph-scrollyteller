@@ -24,6 +24,14 @@ const Graph = ({ nodes, edges, panels }) => {
     console.info("DOM node changed");
   }, [domNode.current, canvas]);
 
+  useEffect(() => {
+    const resize = () => {
+      canvas.current.setSize(window.innerWidth, window.innerHeight);
+    };
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  });
+
   return <div ref={domNode} />;
 };
 
