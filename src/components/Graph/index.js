@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import styles from "./styles.scss";
 import Canvas from "./canvas";
@@ -7,8 +7,15 @@ const Graph = ({ nodes, edges, panels }) => {
   const domNode = useRef();
   const canvas = useRef();
 
+  const [isOrbital, setIsOrbital] = useState(false);
+
   console.info("Graph re-render");
   console.log("panels", panels);
+
+  const toggleOrbital = () => {
+    if (!isOrbital) setIsOrbital(true);
+    else setIsOrbital(false);
+  }
 
   useEffect(() => {
     console.info("Creating canvas");
@@ -24,7 +31,16 @@ const Graph = ({ nodes, edges, panels }) => {
     console.info("DOM node changed");
   }, [domNode.current, canvas]);
 
-  return <div ref={domNode} />;
+  useEffect(() => {
+    if (isOrbital) canvas.current.orbital = true;
+    else canvas.current.orbital = false;
+  }, [isOrbital])
+
+  return (
+    <div ref={domNode}>
+      <button className={styles.control} onClick={toggleOrbital}>Orbit</button>
+    </div>
+  );
 };
 
 Graph.propTypes = {

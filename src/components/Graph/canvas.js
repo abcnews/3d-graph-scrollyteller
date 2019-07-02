@@ -45,6 +45,8 @@ export default class Canvas {
     // Batch multiple render calls (eg. from hover events)
     this.needsRender = false;
 
+    this.orbital = false;
+
     // THREE instances
     this.scene = new Scene();
     this.camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
@@ -53,7 +55,15 @@ export default class Canvas {
     // For some reason Interaction is applied via a constructor
     new Interaction(this.renderer, this.scene, this.camera);
 
-    // this.controls = new OrbitControls(camera, renderer.domElement);
+    // Trying OrbitControls
+    this.controls = new OrbitControls( this.camera, this.renderer.domElement );
+
+    this.controls.autoRotate = true;
+    this.controls.enabled = true;
+    this.controls.autoRotateSpeed = 1;
+    this.controls.enableZoom = false;
+    // this.controls.target = new Vector3(.5, .5, .5);
+
     this.setSize(width, height);
     this.renderer.setPixelRatio(pixelRatio);
 
@@ -205,7 +215,7 @@ export default class Canvas {
 
       // console.log("displayOpacity", displayOpacity);
 
-      // Don't re-render on every frame, you fool.
+      // Don't re-render on every frame, unless you're auto-rotating...
       if (
         this.needsRender === false &&
         lastProgress === progress &&
@@ -273,9 +283,18 @@ export default class Canvas {
         );
       });
 
-      this.positionCamera(displayBearing);
-      renderer.render(this.scene, this.camera);
       rafRef = requestAnimationFrame(loop);
+      
+      if (this.orbital === false) {
+        this.positionCamera(displayBearing);
+      }
+
+      this.controls.update();
+
+      renderer.render(this.scene, this.camera);
+
+      
+
     };
 
     loop.stop = () => {
@@ -287,6 +306,10 @@ export default class Canvas {
     return loop;
   }
 
+  orbitLoop = () => {
+
+  }
+
   positionCamera(bearing) {
     const { camera } = this;
     const { angle, origin, distance } = bearing;
@@ -296,6 +319,8 @@ export default class Canvas {
     camera.position.z = origin.z + Math.sin(rad) * distance;
     camera.position.y = origin.y + distance / 2;
     camera.lookAt(origin);
+     // User input controls
+     
   }
 
   stop() {
