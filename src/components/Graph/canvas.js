@@ -184,11 +184,6 @@ export default class Canvas {
         previousPanel && previousPanel.config
       );
 
-      const targetVisibility = this.visibilityFromConfig(targetPanel.config);
-      const previousVisibility = this.visibilityFromConfig(
-        previousPanel && previousPanel.config
-      );
-
       const targetPanelBox = targetPanel.element.getBoundingClientRect();
       const pixelsAboveFold = Math.ceil(
         fold + targetPanelBox.height - targetPanelBox.bottom
@@ -202,8 +197,6 @@ export default class Canvas {
         targetBearing,
         progress
       );
-
-      // console.log("displayOpacity", displayOpacity);
 
       // Don't re-render on every frame, you fool.
       if (
@@ -221,9 +214,6 @@ export default class Canvas {
 
       lastProgress = progress;
 
-      // node1.material.opacity = 1 - progress;
-      // node2.material.opacity = progress;
-
       // Modify nodes
       nodes.forEach(n => {
         // Make sure the nodes face the camera
@@ -233,24 +223,20 @@ export default class Canvas {
         n.obj.position.set(n.x, n.y, n.z);
 
         // Figure out visibility
-        const previousOpacity = previousPanel
-          ? n.groups.includes(previousPanel.config.highlight)
-            ? previousVisibility.highlightpct
-            : previousVisibility.lowlightpct
-          : 0;
+        const previousOpacity =
+          n.groups.reduce(
+            opacityReducer(previousPanel ? previousPanel.config : {}),
+            0
+          ) / 100;
 
-        const targetOpacity = n.groups.includes(targetPanel.config.highlight)
-          ? targetVisibility.highlightpct
-          : targetVisibility.lowlightpct;
+        const targetOpacity =
+          n.groups.reduce(opacityReducer(targetPanel.config), 0) / 100;
 
         const displayOpacity = lerpedOpacity(
           previousOpacity,
           targetOpacity,
           progress
         );
-
-        // Set highlight flag
-        n.highlight = n.groups.includes(targetPanel.config.highlight);
 
         // Highlight
         n.material.opacity = displayOpacity;
@@ -394,6 +380,10 @@ function lerpedBearing(a, b, pct) {
     angle: a.angle + (b.angle - a.angle) * pct,
     distance: a.distance + (b.distance - a.distance) * pct
   };
+}
+
+function opacityReducer(config) {
+  return (max, g) => Math.max(max, config[g] || 0);
 }
 
 function getPanelSeparation(a, b) {
