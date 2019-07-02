@@ -1,4 +1,5 @@
 import {
+  Box3,
   Scene,
   PerspectiveCamera,
   CircleGeometry,
@@ -30,17 +31,19 @@ import {
 
 export default class Canvas {
   constructor(nodes, edges, panels, opts = {}) {
-    opts = Object.assign(
+    this.opts = Object.assign(
       {},
       {
         width: window.innerWidth,
         height: window.innerHeight,
-        pixelRatio: window.devicePixelRatio
+        pixelRatio: window.devicePixelRatio,
+        visibilityThreshold: 0,
+        minOpacity: 0
       },
       opts
     );
 
-    const { width, height, pixelRatio } = opts;
+    const { width, height, pixelRatio } = this.opts;
 
     // Batch multiple render calls (eg. from hover events)
     this.needsRender = false;
@@ -74,7 +77,7 @@ export default class Canvas {
         color: 0xffff00,
         depthTest: false,
         transparent: true,
-        opacity: 0.2
+        opacity: 0
       });
       const circle = new Mesh(geometry, material);
 
@@ -156,7 +159,8 @@ export default class Canvas {
 
     const panels = this.panels.map(p => ({
       ...p,
-      element: p.nodes[0].parentElement
+      element: p.nodes[0].parentElement,
+      bearing: this.bearingFromConfig(p.config)
     }));
 
     const panelSeparation = getPanelSeparation(
@@ -166,7 +170,6 @@ export default class Canvas {
 
     const loop = () => {
       const { nodes, edges, renderer, camera, simulation } = this;
-      // TODO: replace this abomination with the proper scroll checking from Odyssey/Scrollyteller
 
       const panelsAboveTheFold = panels.filter(panel => {
         if (!panel.element) return false;
@@ -174,29 +177,15 @@ export default class Canvas {
         return box.height !== 0 && box.top < fold;
       });
 
-      const targetPanelIndex = panelsAboveTheFold.length - 1;
-      const targetPanel = panelsAboveTheFold[targetPanelIndex] || panels[0];
+      const nextPanelIndex = panelsAboveTheFold.length - 1;
+      const nextPanel = panelsAboveTheFold[nextPanelIndex] || panels[0];
+      const prevPanel = panels[nextPanelIndex - 1];
 
-      const previousPanel = panels[targetPanelIndex - 1];
-
-      const targetBearing = this.bearingFromConfig(targetPanel.config);
-      const previousBearing = this.bearingFromConfig(
-        previousPanel && previousPanel.config
-      );
-
-      const targetPanelBox = targetPanel.element.getBoundingClientRect();
-      const pixelsAboveFold = Math.ceil(
-        fold + targetPanelBox.height - targetPanelBox.bottom
-      );
+      const nextPanelBounds = nextPanel.element.getBoundingClientRect();
 
       const progress =
-        pixelsAboveFold / (panelSeparation + targetPanelBox.height);
-
-      const displayBearing = lerpedBearing(
-        previousBearing,
-        targetBearing,
-        progress
-      );
+        Math.ceil(fold + nextPanelBounds.height - nextPanelBounds.bottom) /
+        (panelSeparation + nextPanelBounds.height);
 
       // Don't re-render on every frame, you fool.
       if (
@@ -210,6 +199,9 @@ export default class Canvas {
 
       if (simulation.alpha() > simulation.alphaMin()) {
         simulation.tick();
+        panels.forEach(p => {
+          p.bearing = this.bearingFromConfig(p.config);
+        });
       }
 
       lastProgress = progress;
@@ -223,14 +215,15 @@ export default class Canvas {
         n.obj.position.set(n.x, n.y, n.z);
 
         // Figure out visibility
-        const previousOpacity =
-          n.groups.reduce(
-            opacityReducer(previousPanel ? previousPanel.config : {}),
-            0
-          ) / 100;
+        const previousOpacity = n.groups.reduce(
+          opacityReducer(prevPanel ? prevPanel.config : {}),
+          this.opts.minOpacity
+        );
 
-        const targetOpacity =
-          n.groups.reduce(opacityReducer(targetPanel.config), 0) / 100;
+        const targetOpacity = n.groups.reduce(
+          opacityReducer(nextPanel.config),
+          this.opts.minOpacity
+        );
 
         const displayOpacity = lerpedOpacity(
           previousOpacity,
@@ -238,7 +231,9 @@ export default class Canvas {
           progress
         );
 
-        // Highlight
+        n.isVisible = displayOpacity > this.opts.visibilityThreshold;
+
+        // Set opacity
         n.material.opacity = displayOpacity;
       });
 
@@ -259,6 +254,14 @@ export default class Canvas {
         );
       });
 
+      // console.log("autoBearing", autoBearing.origin);
+
+      const prevBearing = prevPanel
+        ? prevPanel.bearing
+        : this.bearingFromConfig();
+      const nextBearing = nextPanel.bearing;
+      const displayBearing = lerpedBearing(prevBearing, nextBearing, progress);
+
       this.positionCamera(displayBearing);
       renderer.render(this.scene, this.camera);
       rafRef = requestAnimationFrame(loop);
@@ -275,12 +278,11 @@ export default class Canvas {
 
   positionCamera(bearing) {
     const { camera } = this;
-    const { angle, origin, distance } = bearing;
+    const { angle, origin, distance, phi } = bearing;
     const rad = (angle * Math.PI) / 180;
-
     camera.position.x = origin.x + Math.cos(rad) * distance;
     camera.position.z = origin.z + Math.sin(rad) * distance;
-    camera.position.y = origin.y + distance / 2;
+    camera.position.y = origin.y + Math.sin(rad) * Math.sin(phi) * distance;
     camera.lookAt(origin);
   }
 
@@ -334,13 +336,58 @@ export default class Canvas {
   }
 
   bearingFromConfig(config) {
-    if (!config) {
+    if (!config)
       return {
         origin: { x: 0, y: 0, z: 0 },
         angle: 0,
+        phi: 0.523599, // 30deg
         distance: 500
       };
-    }
+
+    const bounds = new Box3();
+    const nodes = this.nodes
+      .map(n => {
+        const { x, y, z } = n;
+        const opacity = n.groups.reduce(
+          opacityReducer(config),
+          this.opts.minOpacity
+        );
+
+        return {
+          point: new Vector3(x, y, z),
+          isVisible: opacity > this.opts.visibilityThreshold
+        };
+      })
+      .filter(n => n.isVisible);
+
+    nodes.forEach(n => bounds.expandByPoint(n.point));
+
+    const dims = new Vector3();
+    bounds.getSize(dims);
+    const width = dims.x || 1;
+    const height = dims.y || 1;
+    const depth = dims.z || 1;
+
+    const phi =
+      (-Math.PI / 2) * Math.pow(Math.E, -height / (2 * (depth + width)));
+    // console.log("phi", phi);
+    // console.log("dims", dims);
+    const theta = (-Math.PI / 2) * Math.pow(Math.E, -depth / width);
+
+    const radius = Math.max(
+      width / Math.atan(Math.PI / 5),
+      depth / Math.atan(Math.PI / 5),
+      height / Math.atan(Math.PI / 5)
+    );
+
+    const center = new Vector3();
+    bounds.getCenter(center);
+    const defaults = {
+      origin: center,
+      angle: theta * (180 / Math.PI),
+      phi,
+      distance: radius
+    };
 
     const { origin, angle, distance, x, y, z } = config;
     const node = this.nodes.find(
@@ -348,9 +395,14 @@ export default class Canvas {
     ) || { x: 0, y: 0, z: 0 };
 
     return {
-      origin: { x: x || node.x || 0, y: y || node.y || 0, z: z || node.z || 0 },
-      angle: +angle || 0,
-      distance: +distance || 500
+      origin: {
+        x: x || node.x || defaults.origin.x || 0,
+        y: y || node.y || defaults.origin.y || 0,
+        z: z || node.z || defaults.origin.z || 0
+      },
+      angle: +angle || defaults.angle || 0,
+      phi: +phi || defaults.phi || 0,
+      distance: +distance || defaults.distance || 500
     };
   }
 
@@ -379,12 +431,13 @@ function lerpedBearing(a, b, pct) {
       a.origin.z + (b.origin.z - a.origin.z) * pct
     ),
     angle: a.angle + (b.angle - a.angle) * pct,
+    phi: a.phi + (b.phi - a.phi) * pct,
     distance: a.distance + (b.distance - a.distance) * pct
   };
 }
 
 function opacityReducer(config) {
-  return (max, g) => Math.max(max, config[g] || 0);
+  return (max, g) => Math.max(max, +config[g] / 100 || 0);
 }
 
 function getPanelSeparation(a, b) {
