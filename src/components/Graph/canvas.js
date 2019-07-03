@@ -11,11 +11,9 @@ import {
   Mesh,
   Geometry,
   AxesHelper,
-  Texture,
-  LinearFilter,
+  TextureLoader,
   SpriteMaterial,
-  Sprite,
-  Color
+  Sprite
 } from "three";
 import { Interaction } from "three.interaction";
 
@@ -79,26 +77,20 @@ export default class Canvas {
       .stop();
 
     nodes.forEach(node => {
-      // TODO: Nodes should probably be sprites: https://threejs.org/docs/#api/en/objects/Sprite
-      const geometry = new CircleGeometry(this.opts.nodeRadius, 32);
-      const material = new MeshBasicMaterial({
-        color: 0x38bad7,
-        depthTest: false,
-        transparent: true,
-        opacity: 0
-      });
-      const circle = new Mesh(geometry, material);
+      // TODO: the actual textures should be power of 2 sized (eg. 256x256 to help with mipmaps)
+      const spriteTexture = new TextureLoader().load(require('./sprite.jpg'));
+      const spriteMaterial = new SpriteMaterial({ map: spriteTexture, color: 0xffffff });
 
-      circle.on("mouseover", e => {
+      const spriteHoverTexture = new TextureLoader().load(require('./sprite-hover.jpg'));
+      const spriteHoverMaterial = new SpriteMaterial({ map: spriteHoverTexture, color: 0xffffff });
+
+      const sprite = new Sprite(spriteMaterial);
+
+      sprite.on("mouseover", e => {
         // TODO: actually disply some kind of highlight and
         //      text box for the hovered data
-        circle.material = new MeshBasicMaterial({
-          color: 0xf26d6c,
-          depthTest: false,
-          transparent: true,
-          opacity: 1
-        });
-
+        sprite.material = spriteHoverMaterial;
+        
         const mouseEvent = e.data.originalEvent;
 
         console.log("mouse:", mouseEvent.clientX, mouseEvent.clientY);
@@ -108,28 +100,24 @@ export default class Canvas {
         this.needsRender = true;
       });
 
-      circle.on("mouseout", e => {
-        circle.material = material;
+      sprite.on("mouseout", e => {
+        // TODO: actually disply some kind of highlight and
+        //      text box for the hovered data
+        sprite.material = spriteMaterial;
         // Batch render callss
         this.needsRender = true;
       });
 
-      circle.renderOrder = 1;
-      // circle.translateX(node.x);
-      // circle.translateY(node.y);
-      // circle.translateZ(node.z);
+      sprite.renderOrder = 1;
+      sprite.translateX(node.x);
+      sprite.translateY(node.y);
+      sprite.translateZ(node.z);
+      sprite.scale.setScalar(40); // TODO: scale will depend on the actual texture
 
-      this.scene.add(circle);
+      this.scene.add(sprite);
 
-      // Put them on the node object so we can access them on re-renders
-      node.obj = circle;
-      node.material = material;
-      node.geometry = geometry;
-
-      // Labels
-      const sprite = makeTextSprite(node.label);
-      node.labelSprite = sprite;
-      node.obj.add(sprite);
+      node.obj = sprite;
+      node.material = spriteMaterial;
     });
 
     edges.forEach(edge => {
@@ -222,10 +210,7 @@ export default class Canvas {
 
       // Modify nodes
       nodes.forEach(n => {
-        // Make sure the nodes face the camera
-        n.obj.lookAt(camera.position);
-
-        // Move it
+        // Move the sprite
         n.obj.position.set(n.x, n.y, n.z);
         n.labelSprite.position.set(0, this.opts.nodeRadius * 1.1, 0);
 
@@ -328,7 +313,6 @@ export default class Canvas {
     const { nodes, edges, scene, renderer } = this;
     nodes.forEach(n => {
       n.material.dispose();
-      n.geometry.dispose();
     });
     edges.forEach(e => {
       e.material.dispose();
