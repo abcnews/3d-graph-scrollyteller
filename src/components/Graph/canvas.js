@@ -11,9 +11,12 @@ import {
   Mesh,
   Geometry,
   AxesHelper,
+  Texture,
+  LinearFilter,
   TextureLoader,
   SpriteMaterial,
-  Sprite
+  Sprite,
+  Color
 } from "three";
 import { Interaction } from "three.interaction";
 
@@ -109,15 +112,20 @@ export default class Canvas {
       });
 
       sprite.renderOrder = 1;
-      sprite.translateX(node.x);
-      sprite.translateY(node.y);
-      sprite.translateZ(node.z);
+      // sprite.translateX(node.x);
+      // sprite.translateY(node.y);
+      // sprite.translateZ(node.z);
       sprite.scale.setScalar(40); // TODO: scale will depend on the actual texture
 
       this.scene.add(sprite);
 
       node.obj = sprite;
       node.material = spriteMaterial;
+
+      // Labels
+      const labelSprite = makeTextSprite(node.label);
+      node.labelSprite = labelSprite;
+      node.obj.add(labelSprite);
     });
 
     edges.forEach(edge => {
