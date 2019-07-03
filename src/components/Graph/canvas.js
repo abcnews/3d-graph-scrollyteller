@@ -10,7 +10,8 @@ import {
   Vector3,
   Mesh,
   Geometry,
-  AxesHelper
+  AxesHelper,
+  Color
 } from "three";
 import { Interaction } from "three.interaction";
 
@@ -37,8 +38,8 @@ export default class Canvas {
         width: window.innerWidth,
         height: window.innerHeight,
         pixelRatio: window.devicePixelRatio,
-        visibilityThreshold: 0,
-        minOpacity: 0
+        visibilityThreshold: 0.05,
+        minOpacity: 0.05
       },
       opts
     );
@@ -50,6 +51,7 @@ export default class Canvas {
 
     // THREE instances
     this.scene = new Scene();
+    this.scene.background = new Color(0x5f6b7a)
     this.camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
     this.renderer = new WebGLRenderer();
 
@@ -74,7 +76,7 @@ export default class Canvas {
     nodes.forEach(node => {
       const geometry = new CircleGeometry(5, 32);
       const material = new MeshBasicMaterial({
-        color: 0xffff00,
+        color: 0x38bad7,
         depthTest: false,
         transparent: true,
         opacity: 0
@@ -85,7 +87,7 @@ export default class Canvas {
         // TODO: actually disply some kind of highlight and
         //      text box for the hovered data
         circle.material = new MeshBasicMaterial({
-          color: 0xff0000,
+          color: 0xf26d6c,
           depthTest: false,
           transparent: true,
           opacity: 1
@@ -121,10 +123,10 @@ export default class Canvas {
     edges.forEach(edge => {
       const geometry = new Geometry();
       const material = new LineBasicMaterial({
-        color: 0x00ff00,
-        linewidth: 100,
+        color: 0xffffff,
+        linewidth: 3,
         transparent: true,
-        depthTest: false
+        depthTest: false,
       });
 
       geometry.vertices.push(
