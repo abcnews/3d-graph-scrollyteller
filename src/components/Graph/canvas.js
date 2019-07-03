@@ -10,7 +10,11 @@ import {
   Vector3,
   Mesh,
   Geometry,
-  AxesHelper
+  AxesHelper,
+  Texture,
+  LinearFilter,
+  SpriteMaterial,
+  Sprite
 } from "three";
 import { Interaction } from "three.interaction";
 
@@ -38,7 +42,8 @@ export default class Canvas {
         height: window.innerHeight,
         pixelRatio: window.devicePixelRatio,
         visibilityThreshold: 0,
-        minOpacity: 0
+        minOpacity: 0,
+        nodeRadius: 5
       },
       opts
     );
@@ -72,7 +77,8 @@ export default class Canvas {
       .stop();
 
     nodes.forEach(node => {
-      const geometry = new CircleGeometry(5, 32);
+      // TODO: Nodes should probably be sprites: https://threejs.org/docs/#api/en/objects/Sprite
+      const geometry = new CircleGeometry(this.opts.nodeRadius, 32);
       const material = new MeshBasicMaterial({
         color: 0xffff00,
         depthTest: false,
@@ -107,15 +113,21 @@ export default class Canvas {
       });
 
       circle.renderOrder = 1;
-      circle.translateX(node.x);
-      circle.translateY(node.y);
-      circle.translateZ(node.z);
+      // circle.translateX(node.x);
+      // circle.translateY(node.y);
+      // circle.translateZ(node.z);
 
       this.scene.add(circle);
 
+      // Put them on the node object so we can access them on re-renders
       node.obj = circle;
       node.material = material;
       node.geometry = geometry;
+
+      // Labels
+      const sprite = makeTextSprite(node.label);
+      node.labelSprite = sprite;
+      node.obj.add(sprite);
     });
 
     edges.forEach(edge => {
@@ -213,6 +225,7 @@ export default class Canvas {
 
         // Move it
         n.obj.position.set(n.x, n.y, n.z);
+        n.labelSprite.position.set(0, this.opts.nodeRadius * 1.1, 0);
 
         // Figure out visibility
         const previousOpacity = n.groups.reduce(
@@ -235,6 +248,8 @@ export default class Canvas {
 
         // Set opacity
         n.material.opacity = displayOpacity;
+        n.labelSprite.material.opacity =
+          displayOpacity > this.opts.visibilityThreshold ? displayOpacity : 0;
       });
 
       // Update the edges
@@ -447,4 +462,71 @@ function getPanelSeparation(a, b) {
 
   // In case there is only one panel estimate the separation
   return bBox.top - aBox.bottom;
+}
+
+// https://bocoup.com/blog/learning-three-js-with-real-world-challenges-that-have-already-been-solved
+function makeTextSprite(message, opts) {
+  const parameters = opts || {};
+  const fontface = parameters.fontface || "Helvetica";
+  const fontsize = parameters.fontsize || 100;
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  context.font = fontsize + "px " + fontface;
+
+  // get size data (height depends only on font size)
+  const width = context.measureText(message).width;
+  const height = fontsize;
+  const padding = fontsize * 0.2;
+
+  canvas.height = height + padding * 2;
+  canvas.width = width + padding * 2;
+
+  context.font = fontsize + "px " + fontface;
+
+  context.fillStyle = "rgba(255,255,255,0.3)";
+  roundRect(
+    context,
+    0,
+    0,
+    width + padding * 2,
+    height + padding * 2,
+    padding * 2
+  );
+
+  // text color
+  context.lineWidth = fontsize / 10;
+  context.strokeStyle = "rgba(0,0,0,0.3)";
+  context.strokeText(message, padding, fontsize);
+  context.fillStyle = "rgba(255, 255, 255, 1.0)";
+  context.fillText(message, padding, fontsize);
+
+  // canvas contents will be used for a texture
+  const texture = new Texture(canvas);
+  texture.minFilter = LinearFilter;
+  texture.needsUpdate = true;
+
+  const spriteMaterial = new SpriteMaterial({
+    map: texture
+  });
+  const sprite = new Sprite(spriteMaterial);
+  sprite.center.set(0.5, 0);
+  const scale = 30;
+  sprite.scale.set(scale, scale * (height / width), 1);
+  return sprite;
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
 }
