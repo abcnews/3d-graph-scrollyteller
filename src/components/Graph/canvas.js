@@ -14,7 +14,8 @@ import {
   Texture,
   LinearFilter,
   SpriteMaterial,
-  Sprite
+  Sprite,
+  Color
 } from "three";
 import { Interaction } from "three.interaction";
 
@@ -55,6 +56,7 @@ export default class Canvas {
 
     // THREE instances
     this.scene = new Scene();
+    this.scene.background = new Color(0x5f6b7a);
     this.camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
     this.renderer = new WebGLRenderer();
 
@@ -80,7 +82,7 @@ export default class Canvas {
       // TODO: Nodes should probably be sprites: https://threejs.org/docs/#api/en/objects/Sprite
       const geometry = new CircleGeometry(this.opts.nodeRadius, 32);
       const material = new MeshBasicMaterial({
-        color: 0xffff00,
+        color: 0x38bad7,
         depthTest: false,
         transparent: true,
         opacity: 0
@@ -91,7 +93,7 @@ export default class Canvas {
         // TODO: actually disply some kind of highlight and
         //      text box for the hovered data
         circle.material = new MeshBasicMaterial({
-          color: 0xff0000,
+          color: 0xf26d6c,
           depthTest: false,
           transparent: true,
           opacity: 1
@@ -133,8 +135,8 @@ export default class Canvas {
     edges.forEach(edge => {
       const geometry = new Geometry();
       const material = new LineBasicMaterial({
-        color: 0x00ff00,
-        linewidth: 100,
+        color: 0xffffff,
+        linewidth: 3,
         transparent: true,
         depthTest: false
       });
