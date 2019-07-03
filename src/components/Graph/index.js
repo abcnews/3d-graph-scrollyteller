@@ -32,15 +32,14 @@ const Graph = ({ nodes, edges, panels }) => {
   }, [domNode.current, canvas]);
 
   useEffect(() => {
-    if (isOrbital) canvas.current.orbital = true;
-    else canvas.current.orbital = false;
-  }, [isOrbital])
+    const resize = () => {
+      canvas.current.setSize(window.innerWidth, window.innerHeight);
+    };
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  });
 
-  return (
-    <div ref={domNode}>
-      <button className={styles.control} onClick={toggleOrbital}>Orbit</button>
-    </div>
-  );
+  return <div ref={domNode} />;
 };
 
 Graph.propTypes = {

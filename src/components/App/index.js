@@ -38,7 +38,7 @@ export default ({ panels, nodeData, edgeData, groupData }) => {
 
   // TODO: Add loading indicator
   return (
-    <Scrollyteller panels={panels}>
+    <Scrollyteller panels={panels} onMarker={() => {}}>
       {nodes && edges ? (
         <Graph nodes={nodes} edges={edges} panels={panels} />
       ) : null}
