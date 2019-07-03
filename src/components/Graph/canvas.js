@@ -309,8 +309,6 @@ export default class Canvas {
     camera.position.z = origin.z + Math.sin(rad) * distance;
     camera.position.y = origin.y + Math.sin(rad) * Math.sin(phi) * distance;
     camera.lookAt(origin);
-     // User input controls
-     
   }
 
   stop() {

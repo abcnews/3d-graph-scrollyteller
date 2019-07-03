@@ -8,6 +8,7 @@ const Graph = ({ nodes, edges, panels }) => {
   const canvas = useRef();
 
   const [isOrbital, setIsOrbital] = useState(false);
+  const [isExplore, setIsExplore] = useState(false);
 
   console.info("Graph re-render");
   console.log("panels", panels);
@@ -38,6 +39,11 @@ const Graph = ({ nodes, edges, panels }) => {
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   });
+
+  useEffect(() => {
+    if (isOrbital) canvas.current.orbital = true;
+    else canvas.current.orbital = false;
+}, [isOrbital])
 
   return <div ref={domNode} />;
 };
