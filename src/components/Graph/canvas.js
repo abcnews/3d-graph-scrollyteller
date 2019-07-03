@@ -174,7 +174,12 @@ export default class Canvas {
     const panels = this.panels.map(p => ({
       ...p,
       element: p.nodes[0].parentElement,
-      bearing: this.bearingFromConfig(p.config)
+      // Pre-calculate bearing for each panel
+      bearing: this.bearingFromConfig(p.config),
+      // Pre-calculate node opacities for each panel
+      opacities: this.nodes.map(n =>
+        n.groups.reduce(opacityReducer(p.config), this.opts.minOpacity)
+      )
     }));
 
     const panelSeparation = getPanelSeparation(
@@ -211,6 +216,7 @@ export default class Canvas {
         return;
       }
 
+      // Ensure we re-calculate each panel's bearing from config if the force simulation hasn't fully resolved yet.
       if (simulation.alpha() > simulation.alphaMin()) {
         simulation.tick();
         panels.forEach(p => {
@@ -221,7 +227,7 @@ export default class Canvas {
       lastProgress = progress;
 
       // Modify nodes
-      nodes.forEach(n => {
+      nodes.forEach((n, idx) => {
         // Make sure the nodes face the camera
         n.obj.lookAt(camera.position);
 
@@ -230,19 +236,12 @@ export default class Canvas {
         n.labelSprite.position.set(0, this.opts.nodeRadius * 1.1, 0);
 
         // Figure out visibility
-        const previousOpacity = n.groups.reduce(
-          opacityReducer(prevPanel ? prevPanel.config : {}),
-          this.opts.minOpacity
-        );
-
-        const targetOpacity = n.groups.reduce(
-          opacityReducer(nextPanel.config),
-          this.opts.minOpacity
-        );
+        const prevOpacity = prevPanel ? prevPanel.opacities[idx] : 0;
+        const nextOpacity = nextPanel ? nextPanel.opacities[idx] : 0;
 
         const displayOpacity = lerpedOpacity(
-          previousOpacity,
-          targetOpacity,
+          prevOpacity,
+          nextOpacity,
           progress
         );
 
