@@ -8,9 +8,11 @@ import {
   MeshBasicMaterial,
   LineBasicMaterial,
   Vector3,
+  Vector2,
   Mesh,
   Geometry,
-  AxesHelper
+  AxesHelper,
+  Color
 } from "three";
 import { Interaction } from "three.interaction";
 
@@ -29,6 +31,8 @@ import {
   forceCollide
 } from "d3-force-3d";
 
+import {MeshLine, MeshLineMaterial} from "three.meshline";
+
 export default class Canvas {
   constructor(nodes, edges, panels, opts = {}) {
     this.opts = Object.assign(
@@ -37,19 +41,22 @@ export default class Canvas {
         width: window.innerWidth,
         height: window.innerHeight,
         pixelRatio: window.devicePixelRatio,
-        visibilityThreshold: 0,
-        minOpacity: 0
+        visibilityThreshold: 0.0,
+        minOpacity: 0.1
       },
       opts
     );
 
     const { width, height, pixelRatio } = this.opts;
 
+    // const resolution = 
+
     // Batch multiple render calls (eg. from hover events)
     this.needsRender = false;
 
     // THREE instances
     this.scene = new Scene();
+    this.scene.background = new Color(0x5f6b7a)
     this.camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
     this.renderer = new WebGLRenderer();
 
@@ -74,7 +81,7 @@ export default class Canvas {
     nodes.forEach(node => {
       const geometry = new CircleGeometry(5, 32);
       const material = new MeshBasicMaterial({
-        color: 0xffff00,
+        color: 0x38bad7,
         depthTest: false,
         transparent: true,
         opacity: 0
@@ -85,7 +92,7 @@ export default class Canvas {
         // TODO: actually disply some kind of highlight and
         //      text box for the hovered data
         circle.material = new MeshBasicMaterial({
-          color: 0xff0000,
+          color: 0xf26d6c,
           depthTest: false,
           transparent: true,
           opacity: 1
@@ -120,25 +127,49 @@ export default class Canvas {
 
     edges.forEach(edge => {
       const geometry = new Geometry();
-      const material = new LineBasicMaterial({
-        color: 0x00ff00,
-        linewidth: 100,
+
+      // const material = new LineBasicMaterial({
+      //   color: 0xffffff,
+      //   linewidth: 3,
+      //   transparent: true,
+      //   depthTest: false,
+      // });
+
+      const resolution = new Vector2(width, height);
+
+      const material = new MeshLineMaterial({
+        lineWidth: 3,
+        sizeAttenuation: 0,
+        color: 0xffffff,
+        opacity: 1,
         transparent: true,
-        depthTest: false
-      });
+        resolution: resolution,
+        near: this.camera.near,
+		    far: this.camera.far
+      })
 
       geometry.vertices.push(
         new Vector3(edge.source.x, edge.source.y, edge.source.z),
         new Vector3(edge.target.x, edge.target.y, edge.target.z)
       );
 
-      const line = new Line(geometry, material);
+      // for( var j = 0; j < Math.PI; j += 2 * Math.PI / 100 ) {
+      //   var v = new Vector3( Math.cos( j ), Math.sin( j ), 0 );
+      //   geometry.vertices.push( v );
+      // }
 
-      line.renderOrder = 0;
+      // const line = new Line(geometry, material);
 
-      this.scene.add(line);
+      const line = new MeshLine();
+      line.setGeometry(geometry);
 
-      edge.obj = line;
+      const lineMesh = new Mesh(line.geometry, material)
+
+      lineMesh.renderOrder = 0;
+
+      this.scene.add(lineMesh);
+
+      edge.obj = lineMesh;
       edge.material = material;
       edge.geometry = geometry;
     });
