@@ -82,6 +82,8 @@ export default class Canvas {
       const circle = new Mesh(geometry, material);
 
       circle.on("mouseover", e => {
+        if (!node.isVisible) return;
+
         // TODO: actually disply some kind of highlight and
         //      text box for the hovered data
         circle.material = new MeshBasicMaterial({
@@ -101,6 +103,8 @@ export default class Canvas {
       });
 
       circle.on("mouseout", e => {
+        if (!node.isVisible) return;
+        
         circle.material = material;
         // Batch render callss
         this.needsRender = true;
