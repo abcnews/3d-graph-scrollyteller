@@ -10,7 +10,13 @@ import {
   Vector3,
   Mesh,
   Geometry,
-  AxesHelper
+  AxesHelper,
+  Texture,
+  LinearFilter,
+  TextureLoader,
+  SpriteMaterial,
+  Sprite,
+  Color
 } from "three";
 import { Interaction } from "three.interaction";
 
@@ -38,7 +44,8 @@ export default class Canvas {
         height: window.innerHeight,
         pixelRatio: window.devicePixelRatio,
         visibilityThreshold: 0,
-        minOpacity: 0
+        minOpacity: 0,
+        nodeRadius: 5
       },
       opts
     );
@@ -52,6 +59,7 @@ export default class Canvas {
 
     // THREE instances
     this.scene = new Scene();
+    this.scene.background = new Color(0x5f6b7a);
     this.camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
     this.renderer = new WebGLRenderer();
 
@@ -82,25 +90,20 @@ export default class Canvas {
       .stop();
 
     nodes.forEach(node => {
-      const geometry = new CircleGeometry(5, 32);
-      const material = new MeshBasicMaterial({
-        color: 0xffff00,
-        depthTest: false,
-        transparent: true,
-        opacity: 0
-      });
-      const circle = new Mesh(geometry, material);
+      // TODO: the actual textures should be power of 2 sized (eg. 256x256 to help with mipmaps)
+      const spriteTexture = new TextureLoader().load(require('./sprite.jpg'));
+      const spriteMaterial = new SpriteMaterial({ map: spriteTexture, color: 0xffffff });
 
-      circle.on("mouseover", e => {
+      const spriteHoverTexture = new TextureLoader().load(require('./sprite-hover.jpg'));
+      const spriteHoverMaterial = new SpriteMaterial({ map: spriteHoverTexture, color: 0xffffff });
+
+      const sprite = new Sprite(spriteMaterial);
+
+      sprite.on("mouseover", e => {
         // TODO: actually disply some kind of highlight and
         //      text box for the hovered data
-        circle.material = new MeshBasicMaterial({
-          color: 0xff0000,
-          depthTest: false,
-          transparent: true,
-          opacity: 1
-        });
-
+        sprite.material = spriteHoverMaterial;
+        
         const mouseEvent = e.data.originalEvent;
 
         console.log("mouse:", mouseEvent.clientX, mouseEvent.clientY);
@@ -110,29 +113,36 @@ export default class Canvas {
         this.needsRender = true;
       });
 
-      circle.on("mouseout", e => {
-        circle.material = material;
+      sprite.on("mouseout", e => {
+        // TODO: actually disply some kind of highlight and
+        //      text box for the hovered data
+        sprite.material = spriteMaterial;
         // Batch render callss
         this.needsRender = true;
       });
 
-      circle.renderOrder = 1;
-      circle.translateX(node.x);
-      circle.translateY(node.y);
-      circle.translateZ(node.z);
+      sprite.renderOrder = 1;
+      // sprite.translateX(node.x);
+      // sprite.translateY(node.y);
+      // sprite.translateZ(node.z);
+      sprite.scale.setScalar(40); // TODO: scale will depend on the actual texture
 
-      this.scene.add(circle);
+      this.scene.add(sprite);
 
-      node.obj = circle;
-      node.material = material;
-      node.geometry = geometry;
+      node.obj = sprite;
+      node.material = spriteMaterial;
+
+      // Labels
+      const labelSprite = makeTextSprite(node.label);
+      node.labelSprite = labelSprite;
+      node.obj.add(labelSprite);
     });
 
     edges.forEach(edge => {
       const geometry = new Geometry();
       const material = new LineBasicMaterial({
-        color: 0x00ff00,
-        linewidth: 100,
+        color: 0xffffff,
+        linewidth: 3,
         transparent: true,
         depthTest: false
       });
@@ -218,11 +228,9 @@ export default class Canvas {
 
       // Modify nodes
       nodes.forEach(n => {
-        // Make sure the nodes face the camera
-        n.obj.lookAt(camera.position);
-
-        // Move it
+        // Move the sprite
         n.obj.position.set(n.x, n.y, n.z);
+        n.labelSprite.position.set(0, this.opts.nodeRadius * 1.1, 0);
 
         // Figure out visibility
         const previousOpacity = n.groups.reduce(
@@ -245,6 +253,8 @@ export default class Canvas {
 
         // Set opacity
         n.material.opacity = displayOpacity;
+        n.labelSprite.material.opacity =
+          displayOpacity > this.opts.visibilityThreshold ? displayOpacity : 0;
       });
 
       // Update the edges
@@ -274,6 +284,12 @@ export default class Canvas {
 
       this.positionCamera(displayBearing);
       renderer.render(this.scene, this.camera);
+      if (typeof this.onRenderCallback === "function") {
+        this.onRenderCallback({
+          camera: { position: this.camera.position },
+          bearing: displayBearing
+        });
+      }
       rafRef = requestAnimationFrame(loop);
       
       if (this.orbital === false) {
@@ -336,7 +352,6 @@ export default class Canvas {
     const { nodes, edges, scene, renderer } = this;
     nodes.forEach(n => {
       n.material.dispose();
-      n.geometry.dispose();
     });
     edges.forEach(e => {
       e.material.dispose();
@@ -440,6 +455,10 @@ export default class Canvas {
       this.scene.add(this.axesHelper);
     }
   }
+
+  onRender(fn) {
+    this.onRenderCallback = fn;
+  }
 }
 
 function lerpedOpacity(a, b, pct) {
@@ -472,4 +491,71 @@ function getPanelSeparation(a, b) {
 
   // In case there is only one panel estimate the separation
   return bBox.top - aBox.bottom;
+}
+
+// https://bocoup.com/blog/learning-three-js-with-real-world-challenges-that-have-already-been-solved
+function makeTextSprite(message, opts) {
+  const parameters = opts || {};
+  const fontface = parameters.fontface || "Helvetica";
+  const fontsize = parameters.fontsize || 100;
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  context.font = fontsize + "px " + fontface;
+
+  // get size data (height depends only on font size)
+  const width = context.measureText(message).width;
+  const height = fontsize;
+  const padding = fontsize * 0.2;
+
+  canvas.height = height + padding * 2;
+  canvas.width = width + padding * 2;
+
+  context.font = fontsize + "px " + fontface;
+
+  context.fillStyle = "rgba(255,255,255,0.3)";
+  roundRect(
+    context,
+    0,
+    0,
+    width + padding * 2,
+    height + padding * 2,
+    padding * 2
+  );
+
+  // text color
+  context.lineWidth = fontsize / 10;
+  context.strokeStyle = "rgba(0,0,0,0.3)";
+  context.strokeText(message, padding, fontsize);
+  context.fillStyle = "rgba(255, 255, 255, 1.0)";
+  context.fillText(message, padding, fontsize);
+
+  // canvas contents will be used for a texture
+  const texture = new Texture(canvas);
+  texture.minFilter = LinearFilter;
+  texture.needsUpdate = true;
+
+  const spriteMaterial = new SpriteMaterial({
+    map: texture
+  });
+  const sprite = new Sprite(spriteMaterial);
+  sprite.center.set(0.5, 0);
+  const scale = 30;
+  sprite.scale.set(scale, scale * (height / width), 1);
+  return sprite;
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
 }
