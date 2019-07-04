@@ -51,6 +51,7 @@ export default class Canvas {
     this.needsRender = false;
 
     this.isOrbital = false;
+    this.isExplore = false;
 
     // THREE instances
     this.scene = new Scene();
@@ -65,10 +66,9 @@ export default class Canvas {
     this.controls = new OrbitControls( this.camera, this.renderer.domElement );
 
     this.controls.autoRotate = true;
-    this.controls.enabled = true;
+    this.controls.enabled = false;
     this.controls.autoRotateSpeed = 1;
-    this.controls.enableZoom = false;
-    // this.controls.target = new Vector3(.5, .5, .5);
+    this.controls.enableZoom = true;
 
     this.setSize(width, height);
     this.renderer.setPixelRatio(pixelRatio);
@@ -244,12 +244,20 @@ export default class Canvas {
         // Only update the position if the label is actually visible
         if (n.isVisible) {
           const screenPosition = worldToScreen(n.obj.position, this.camera);
-          n.labelElement.style.setProperty('transform', `translate(${screenPosition.x}px, ${screenPosition.y}px)`);
+          n.labelElement.style.setProperty(
+            "transform",
+            `translate(${screenPosition.x}px, ${screenPosition.y}px)`
+          );
         }
 
         // Set opacity
         n.material.opacity = displayOpacity;
-        n.labelElement.style.setProperty('opacity', displayOpacity > this.opts.visibilityThreshold ? displayOpacity : 0);
+        n.labelElement.style.setProperty(
+          "opacity",
+          displayOpacity > this.opts.visibilityThreshold
+            ? displayOpacity
+            : 0
+        );
       });
 
       // Update the edges
@@ -275,28 +283,25 @@ export default class Canvas {
         ? prevPanel.bearing
         : this.bearingFromConfig();
       const nextBearing = nextPanel.bearing;
-      const displayBearing = lerpedBearing(prevBearing, nextBearing, progress);
+      const displayBearing = lerpedBearing(
+        prevBearing,
+        nextBearing,
+        progress
+      );
 
-      this.positionCamera(displayBearing);
-      renderer.render(this.scene, this.camera);
-      if (typeof this.onRenderCallback === "function") {
-        this.onRenderCallback({
-          camera: { position: this.camera.position },
-          bearing: displayBearing
-        });
+      if (this.isOrbital === false && this.isExplore === false) {
+        this.positionCamera(displayBearing);
+
+        if (typeof this.onRenderCallback === "function") {
+          this.onRenderCallback({
+            camera: { position: this.camera.position },
+            bearing: displayBearing
+          });
+        }
       }
       rafRef = requestAnimationFrame(loop);
-      
-      if (this.isOrbital === false) {
-        this.positionCamera(displayBearing);
-      }
-
       this.controls.update();
-
       renderer.render(this.scene, this.camera);
-
-      
-
     };
 
     loop.stop = () => {
@@ -448,6 +453,31 @@ export default class Canvas {
     } else {
       this.axesHelper = new AxesHelper(5000);
       this.scene.add(this.axesHelper);
+    }
+  }
+
+  toggleOrbitalMode() {
+    this.isExplore = false; // Only one mode ad a time
+    if (this.isOrbital) {
+      this.isOrbital = false;
+      this.controls.enabled = false;
+      this.controls.autoRotate = false;
+    } else {
+      this.isOrbital = true;
+      this.controls.autoRotate = true;
+      this.controls.enabled = false;
+    }
+  }
+
+  toggleExploreMode() {
+    this.isOrbital = false;
+    if (this.isExplore) {
+      this.isExplore = false;
+      this.controls.enabled = false;
+    } else {
+      this.isExplore = true;
+      this.controls.autoRotate = false;
+      this.controls.enabled = true;
     }
   }
 

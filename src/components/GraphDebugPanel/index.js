@@ -15,6 +15,12 @@ export default ({ canvas }) => {
       <button onClick={() => canvas.toggleAxesHelper()}>
         Toggle Axes Helper
       </button>
+      <button onClick={() => canvas.toggleOrbitalMode()}>
+        Toggle Orbit
+      </button>
+      <button onClick={() => canvas.toggleExploreMode()}>
+        Toggle Explore
+      </button>
       <span>angle: {Math.round(data.bearing.angle)}; </span>
       <span>distance: {Math.round(data.bearing.distance)}; </span>
       <span>phi: {Math.round(data.bearing.phi)}; </span>
