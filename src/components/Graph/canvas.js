@@ -83,7 +83,7 @@ export default class Canvas {
 
       const circle = new Sprite(spriteMaterial);
 
-      sprite.on("mouseover", e => {
+      circle.on("mouseover", e => {
         // TODO: actually disply some kind of highlight and
         //      text box for the hovered data
         circle.material = spriteHoverMaterial;
@@ -212,9 +212,6 @@ export default class Canvas {
         // Move the sprite
         n.obj.position.set(n.x, n.y, n.z);
 
-        const screenPosition = worldToScreen(n.obj.position, this.camera);
-        n.labelElement.style.setProperty('transform', `translate(${screenPosition.x}px, ${screenPosition.y}px)`);
-
         // Figure out visibility
         const previousOpacity = n.groups.reduce(
           opacityReducer(prevPanel ? prevPanel.config : {}),
@@ -233,6 +230,12 @@ export default class Canvas {
         );
 
         n.isVisible = displayOpacity > this.opts.visibilityThreshold;
+
+        // Only update the position if the label is actually visible
+        if (n.isVisible) {
+          const screenPosition = worldToScreen(n.obj.position, this.camera);
+          n.labelElement.style.setProperty('transform', `translate(${screenPosition.x}px, ${screenPosition.y}px)`);
+        }
 
         // Set opacity
         n.material.opacity = displayOpacity;
