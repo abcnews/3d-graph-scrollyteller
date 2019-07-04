@@ -55,7 +55,7 @@ export default class Canvas {
     // Batch multiple render calls (eg. from hover events)
     this.needsRender = false;
 
-    this.orbital = false;
+    this.isOrbital = false;
 
     // THREE instances
     this.scene = new Scene();
@@ -292,7 +292,7 @@ export default class Canvas {
       }
       rafRef = requestAnimationFrame(loop);
       
-      if (this.orbital === false) {
+      if (this.isOrbital === false) {
         this.positionCamera(displayBearing);
       }
 

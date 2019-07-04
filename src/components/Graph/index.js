@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
+import { render } from "react-dom";
 import PropTypes from "prop-types";
 import styles from "./styles.scss";
 import Canvas from "./canvas";
@@ -16,7 +17,7 @@ const Graph = ({ nodes, edges, panels }) => {
   const toggleOrbital = () => {
     if (!isOrbital) setIsOrbital(true);
     else setIsOrbital(false);
-  }
+  };
 
   useEffect(() => {
     console.info("Creating canvas");
@@ -47,9 +48,14 @@ const Graph = ({ nodes, edges, panels }) => {
   });
 
   useEffect(() => {
-    if (isOrbital) canvas.current.orbital = true;
-    else canvas.current.orbital = false;
-}, [isOrbital])
+    // Toggle for Orbital (spin)
+    if (isOrbital) canvas.current.isOrbital = true;
+    else canvas.current.isOrbital = false;
+
+    // Toggle for Explore mode
+    if (isExplore) canvas.current.isExplore = true;
+    else canvas.current.isExplore = false;
+  }, [isOrbital, isExplore]);
 
   return <div ref={domNode} />;
 };
