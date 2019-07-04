@@ -81,11 +81,19 @@ export default class Canvas {
 
     nodes.forEach(node => {
       // TODO: the actual textures should be power of 2 sized (eg. 256x256 to help with mipmaps)
-      const spriteTexture = new TextureLoader().load(require('./sprite.jpg'));
-      const spriteMaterial = new SpriteMaterial({ map: spriteTexture, color: 0xffffff });
+      const spriteTexture = new TextureLoader().load(require("./sprite.jpg"));
+      const spriteMaterial = new SpriteMaterial({
+        map: spriteTexture,
+        color: 0xffffff
+      });
 
-      const spriteHoverTexture = new TextureLoader().load(require('./sprite-hover.jpg'));
-      const spriteHoverMaterial = new SpriteMaterial({ map: spriteHoverTexture, color: 0xffffff });
+      const spriteHoverTexture = new TextureLoader().load(
+        require("./sprite-hover.jpg")
+      );
+      const spriteHoverMaterial = new SpriteMaterial({
+        map: spriteHoverTexture,
+        color: 0xffffff
+      });
 
       const sprite = new Sprite(spriteMaterial);
 
@@ -93,7 +101,7 @@ export default class Canvas {
         // TODO: actually disply some kind of highlight and
         //      text box for the hovered data
         sprite.material = spriteHoverMaterial;
-        
+
         const mouseEvent = e.data.originalEvent;
 
         console.log("mouse:", mouseEvent.clientX, mouseEvent.clientY);
@@ -115,7 +123,7 @@ export default class Canvas {
       // sprite.translateX(node.x);
       // sprite.translateY(node.y);
       // sprite.translateZ(node.z);
-      sprite.scale.setScalar(40); // TODO: scale will depend on the actual texture
+      sprite.scale.setScalar(20); // TODO: scale will depend on the actual texture
 
       this.scene.add(sprite);
 
@@ -125,7 +133,7 @@ export default class Canvas {
       // Labels
       const labelSprite = makeTextSprite(node.label);
       node.labelSprite = labelSprite;
-      node.obj.add(labelSprite);
+      this.scene.add(labelSprite);
     });
 
     edges.forEach(edge => {
@@ -220,7 +228,7 @@ export default class Canvas {
       nodes.forEach(n => {
         // Move the sprite
         n.obj.position.set(n.x, n.y, n.z);
-        n.labelSprite.position.set(0, this.opts.nodeRadius * 1.1, 0);
+        n.labelSprite.position.set(n.x, n.y + this.opts.nodeRadius * 1.1, n.z);
 
         // Figure out visibility
         const previousOpacity = n.groups.reduce(
@@ -462,37 +470,37 @@ function getPanelSeparation(a, b) {
 function makeTextSprite(message, opts) {
   const parameters = opts || {};
   const fontface = parameters.fontface || "Helvetica";
-  const fontsize = parameters.fontsize || 100;
+  const fontSize = parameters.fontSize || 100;
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
-  context.font = fontsize + "px " + fontface;
+  context.font = fontSize + "px " + fontface;
 
   // get size data (height depends only on font size)
-  const width = context.measureText(message).width;
-  const height = fontsize;
-  const padding = fontsize * 0.2;
+  const textWidth = context.measureText(message).width;
+  const padding = fontSize * 0.2;
 
-  canvas.height = height + padding * 2;
-  canvas.width = width + padding * 2;
+  const size = 1024;
+  canvas.width = size;
+  canvas.height = size;
 
-  context.font = fontsize + "px " + fontface;
-
+  // Gotta re-up the font whenever canvas size changes
+  context.font = fontSize + "px " + fontface;
   context.fillStyle = "rgba(255,255,255,0.3)";
   roundRect(
     context,
     0,
     0,
-    width + padding * 2,
-    height + padding * 2,
+    textWidth + padding * 2,
+    fontSize + padding * 2,
     padding * 2
   );
 
   // text color
-  context.lineWidth = fontsize / 10;
+  context.lineWidth = fontSize / 5;
   context.strokeStyle = "rgba(0,0,0,0.3)";
-  context.strokeText(message, padding, fontsize);
+  context.strokeText(message, padding, fontSize);
   context.fillStyle = "rgba(255, 255, 255, 1.0)";
-  context.fillText(message, padding, fontsize);
+  context.fillText(message, padding, fontSize);
 
   // canvas contents will be used for a texture
   const texture = new Texture(canvas);
@@ -503,9 +511,9 @@ function makeTextSprite(message, opts) {
     map: texture
   });
   const sprite = new Sprite(spriteMaterial);
-  sprite.center.set(0.5, 0);
+  sprite.center.set(textWidth / 2 / size, 1 - (fontSize + padding * 2) / size);
   const scale = 30;
-  sprite.scale.set(scale, scale * (height / width), 1);
+  sprite.scale.set(scale, scale, 1);
   return sprite;
 }
 
