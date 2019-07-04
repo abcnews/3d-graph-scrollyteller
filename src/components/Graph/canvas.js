@@ -313,10 +313,6 @@ export default class Canvas {
     return loop;
   }
 
-  orbitLoop = () => {
-
-  }
-
   positionCamera(bearing) {
     const { camera } = this;
     const { angle, origin, distance, phi } = bearing;
