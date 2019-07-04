@@ -11,9 +11,10 @@ import {
   SpriteMaterial,
   TextureLoader,
   Sprite,
-  Color
+  Color,
+  Vector2,
+  Raycaster
 } from "three";
-import { Interaction } from "three.interaction";
 
 import { easePoly } from "d3-ease";
 
@@ -29,6 +30,11 @@ import {
   forceZ,
   forceCollide
 } from "d3-force-3d";
+
+import styles from './styles.scss';
+
+const spriteTexture = new TextureLoader().load(require('./sprite.png'));
+const spriteHoverTexture = new TextureLoader().load(require('./sprite-hover.png'));
 
 export default class Canvas {
   constructor(nodes, edges, panels, opts = {}) {
@@ -60,7 +66,7 @@ export default class Canvas {
     this.renderer = new WebGLRenderer();
 
     // For some reason Interaction is applied via a constructor
-    new Interaction(this.renderer, this.scene, this.camera);
+    // new Interaction(this.renderer, this.scene, this.camera);
 
     // Trying OrbitControls
     this.controls = new OrbitControls( this.camera, this.renderer.domElement );
@@ -85,33 +91,18 @@ export default class Canvas {
       .stop();
 
     nodes.forEach(node => {
-      const spriteTexture = new TextureLoader().load(require('./sprite.png'));
-      const spriteMaterial = new SpriteMaterial({ map: spriteTexture, color: 0xffffff });
-
-      const spriteHoverTexture = new TextureLoader().load(require('./sprite-hover.png'));
-      const spriteHoverMaterial = new SpriteMaterial({ map: spriteHoverTexture, color: 0xffffff });
+      const spriteMaterial = new SpriteMaterial({ map: spriteTexture, color: 0xffffff });      
 
       const circle = new Sprite(spriteMaterial);
 
-      circle.on("mouseover", e => {
-        // TODO: actually disply some kind of highlight and
-        //      text box for the hovered data
-        circle.material = spriteHoverMaterial;
+      node.applyHover = () => {
+        // TODO: actually disply some kind of highlight
+        circle.material = new SpriteMaterial({ map: spriteHoverTexture, color: 0xffffff });
+      };
 
-        const mouseEvent = e.data.originalEvent;
-
-        console.log("mouse:", mouseEvent.clientX, mouseEvent.clientY);
-        console.log(node.label, "-", node.type);
-
-        // Batch render calls
-        this.needsRender = true;
-      });
-
-      circle.on("mouseout", e => {
+      node.removeHover = () => {
         circle.material = spriteMaterial;
-        // Batch render callss
-        this.needsRender = true;
-      });
+      }
 
       circle.renderOrder = 1;
       circle.scale.setScalar(10);
@@ -123,7 +114,7 @@ export default class Canvas {
 
       // Labels
       const label = document.createElement('div');
-      label.style.setProperty('position', 'absolute');
+      label.className = styles.label;
       document.querySelector('#relativeParent').appendChild(label);
       label.innerText = node.label;
       node.labelElement = label;
@@ -158,6 +149,14 @@ export default class Canvas {
     this.edges = edges;
     this.panels = panels;
 
+    this.raycaster = new Raycaster()
+    this.mouse = new Vector2();
+    window.addEventListener('mousemove', e => {
+      e.preventDefault();
+      this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      this.mouse.y = - (e.clientY / window.innerHeight) * 2 + 1;
+    });
+
     this.loop = this.start();
   }
 
@@ -181,6 +180,13 @@ export default class Canvas {
 
     const loop = () => {
       const { nodes, edges, renderer, camera, simulation } = this;
+
+      // Check for hovers
+      // TODO: remember previous intersects to more accurately detect mouseout
+      this.raycaster.setFromCamera(this.mouse, this.camera);
+      const intersections = this.raycaster.intersectObjects(nodes.map(n => n.obj)).map(o => o.object);
+
+      if (intersections.length > 0) this.needsRender = true;
 
       const panelsAboveTheFold = panels.filter(panel => {
         if (!panel.element) return false;
@@ -207,6 +213,8 @@ export default class Canvas {
         rafRef = requestAnimationFrame(loop);
         return;
       }
+
+      this.needsRender = false;
 
       if (simulation.alpha() > simulation.alphaMin()) {
         simulation.tick();
@@ -240,6 +248,13 @@ export default class Canvas {
         );
 
         n.isVisible = displayOpacity > this.opts.visibilityThreshold;
+
+        // Perform hover if this node is being intersected
+        if (intersections.length > 0 && n.isVisible && intersections.includes(n.obj)) {
+          n.applyHover && n.applyHover();
+        } else {
+          n.removeHover && n.removeHover();
+        }
 
         // Only update the position if the label is actually visible
         if (n.isVisible) {
