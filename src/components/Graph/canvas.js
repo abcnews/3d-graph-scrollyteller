@@ -249,7 +249,7 @@ export default class Canvas {
         // Only update the position if the label is actually visible
         if (n.isVisible) {
           const screenPosition = worldToScreen(n.obj.position, this.camera);
-          n.labelElement.style.setProperty('transform', `translate(${screenPosition.x}px, ${screenPosition.y}px)`);
+          n.labelElement.style.setProperty('transform', `translate(calc(${screenPosition.x}px - 50%), ${screenPosition.y + 8 + Math.abs(screenPosition.z / 13)}px)`);
         }
 
         // Set opacity
@@ -486,7 +486,7 @@ function worldToScreen(vector3, camera) {
 
   v.x = (v.x + 1) * window.innerWidth / 2;
   v.y = - (v.y - 1) * window.innerHeight / 2;
-  v.z = vector3.z;
+  v.z = camera.position.distanceTo(vector3);
   
   return v;
 }
