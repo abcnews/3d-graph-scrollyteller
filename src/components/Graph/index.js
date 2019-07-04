@@ -8,9 +8,6 @@ const Graph = ({ nodes, edges, panels }) => {
   const domNode = useRef();
   const canvas = useRef();
 
-  const [isOrbital, setIsOrbital] = useState(false);
-  const [isExplore, setIsExplore] = useState(false);
-
   console.info("Graph re-render");
   console.log("panels", panels);
 
@@ -47,17 +44,7 @@ const Graph = ({ nodes, edges, panels }) => {
     return () => window.removeEventListener("resize", resize);
   });
 
-  useEffect(() => {
-    // Toggle for Orbital (spin)
-    if (isOrbital) canvas.current.isOrbital = true;
-    else canvas.current.isOrbital = false;
-
-    // Toggle for Explore mode
-    if (isExplore) canvas.current.isExplore = true;
-    else canvas.current.isExplore = false;
-  }, [isOrbital, isExplore]);
-
-  return <div ref={domNode} />;
+  return <div id="relativeParent" style={{ position: 'relative' }} ref={domNode} />;
 };
 
 Graph.propTypes = {

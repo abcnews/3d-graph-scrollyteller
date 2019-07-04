@@ -2,19 +2,14 @@ import {
   Box3,
   Scene,
   PerspectiveCamera,
-  CircleGeometry,
   Line,
   WebGLRenderer,
-  MeshBasicMaterial,
   LineBasicMaterial,
   Vector3,
-  Mesh,
   Geometry,
   AxesHelper,
-  Texture,
-  LinearFilter,
-  TextureLoader,
   SpriteMaterial,
+  TextureLoader,
   Sprite,
   Color
 } from "three";
@@ -90,20 +85,19 @@ export default class Canvas {
       .stop();
 
     nodes.forEach(node => {
-      // TODO: the actual textures should be power of 2 sized (eg. 256x256 to help with mipmaps)
-      const spriteTexture = new TextureLoader().load(require('./sprite.jpg'));
+      const spriteTexture = new TextureLoader().load(require('./sprite.png'));
       const spriteMaterial = new SpriteMaterial({ map: spriteTexture, color: 0xffffff });
 
-      const spriteHoverTexture = new TextureLoader().load(require('./sprite-hover.jpg'));
+      const spriteHoverTexture = new TextureLoader().load(require('./sprite-hover.png'));
       const spriteHoverMaterial = new SpriteMaterial({ map: spriteHoverTexture, color: 0xffffff });
 
-      const sprite = new Sprite(spriteMaterial);
+      const circle = new Sprite(spriteMaterial);
 
-      sprite.on("mouseover", e => {
+      circle.on("mouseover", e => {
         // TODO: actually disply some kind of highlight and
         //      text box for the hovered data
-        sprite.material = spriteHoverMaterial;
-        
+        circle.material = spriteHoverMaterial;
+
         const mouseEvent = e.data.originalEvent;
 
         console.log("mouse:", mouseEvent.clientX, mouseEvent.clientY);
@@ -113,29 +107,26 @@ export default class Canvas {
         this.needsRender = true;
       });
 
-      sprite.on("mouseout", e => {
-        // TODO: actually disply some kind of highlight and
-        //      text box for the hovered data
-        sprite.material = spriteMaterial;
+      circle.on("mouseout", e => {
+        circle.material = spriteMaterial;
         // Batch render callss
         this.needsRender = true;
       });
 
-      sprite.renderOrder = 1;
-      // sprite.translateX(node.x);
-      // sprite.translateY(node.y);
-      // sprite.translateZ(node.z);
-      sprite.scale.setScalar(40); // TODO: scale will depend on the actual texture
+      circle.renderOrder = 1;
+      circle.scale.setScalar(10);
+      this.scene.add(circle);
 
-      this.scene.add(sprite);
-
-      node.obj = sprite;
+      // Put them on the node object so we can access them on re-renders
+      node.obj = circle;
       node.material = spriteMaterial;
 
       // Labels
-      const labelSprite = makeTextSprite(node.label);
-      node.labelSprite = labelSprite;
-      node.obj.add(labelSprite);
+      const label = document.createElement('div');
+      label.style.setProperty('position', 'absolute');
+      document.querySelector('#relativeParent').appendChild(label);
+      label.innerText = node.label;
+      node.labelElement = label;
     });
 
     edges.forEach(edge => {
@@ -230,7 +221,6 @@ export default class Canvas {
       nodes.forEach(n => {
         // Move the sprite
         n.obj.position.set(n.x, n.y, n.z);
-        n.labelSprite.position.set(0, this.opts.nodeRadius * 1.1, 0);
 
         // Figure out visibility
         const previousOpacity = n.groups.reduce(
@@ -251,10 +241,15 @@ export default class Canvas {
 
         n.isVisible = displayOpacity > this.opts.visibilityThreshold;
 
+        // Only update the position if the label is actually visible
+        if (n.isVisible) {
+          const screenPosition = worldToScreen(n.obj.position, this.camera);
+          n.labelElement.style.setProperty('transform', `translate(${screenPosition.x}px, ${screenPosition.y}px)`);
+        }
+
         // Set opacity
         n.material.opacity = displayOpacity;
-        n.labelSprite.material.opacity =
-          displayOpacity > this.opts.visibilityThreshold ? displayOpacity : 0;
+        n.labelElement.style.setProperty('opacity', displayOpacity > this.opts.visibilityThreshold ? displayOpacity : 0);
       });
 
       // Update the edges
@@ -493,69 +488,15 @@ function getPanelSeparation(a, b) {
   return bBox.top - aBox.bottom;
 }
 
-// https://bocoup.com/blog/learning-three-js-with-real-world-challenges-that-have-already-been-solved
-function makeTextSprite(message, opts) {
-  const parameters = opts || {};
-  const fontface = parameters.fontface || "Helvetica";
-  const fontsize = parameters.fontsize || 100;
-  const canvas = document.createElement("canvas");
-  const context = canvas.getContext("2d");
-  context.font = fontsize + "px " + fontface;
+function worldToScreen(vector3, camera) {
+  camera.updateMatrixWorld();
 
-  // get size data (height depends only on font size)
-  const width = context.measureText(message).width;
-  const height = fontsize;
-  const padding = fontsize * 0.2;
+  let v = vector3.clone();
+  v.project(camera);
 
-  canvas.height = height + padding * 2;
-  canvas.width = width + padding * 2;
-
-  context.font = fontsize + "px " + fontface;
-
-  context.fillStyle = "rgba(255,255,255,0.3)";
-  roundRect(
-    context,
-    0,
-    0,
-    width + padding * 2,
-    height + padding * 2,
-    padding * 2
-  );
-
-  // text color
-  context.lineWidth = fontsize / 10;
-  context.strokeStyle = "rgba(0,0,0,0.3)";
-  context.strokeText(message, padding, fontsize);
-  context.fillStyle = "rgba(255, 255, 255, 1.0)";
-  context.fillText(message, padding, fontsize);
-
-  // canvas contents will be used for a texture
-  const texture = new Texture(canvas);
-  texture.minFilter = LinearFilter;
-  texture.needsUpdate = true;
-
-  const spriteMaterial = new SpriteMaterial({
-    map: texture
-  });
-  const sprite = new Sprite(spriteMaterial);
-  sprite.center.set(0.5, 0);
-  const scale = 30;
-  sprite.scale.set(scale, scale * (height / width), 1);
-  return sprite;
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
+  v.x = (v.x + 1) * window.innerWidth / 2;
+  v.y = - (v.y - 1) * window.innerHeight / 2;
+  v.z = vector3.z;
+  
+  return v;
 }
