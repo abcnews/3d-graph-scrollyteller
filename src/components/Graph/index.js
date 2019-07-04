@@ -39,7 +39,7 @@ const Graph = ({ nodes, edges, panels }) => {
     return () => window.removeEventListener("resize", resize);
   });
 
-  return <div ref={domNode} />;
+  return <div id="relativeParent" style={{ position: 'relative' }} ref={domNode} />;
 };
 
 Graph.propTypes = {
