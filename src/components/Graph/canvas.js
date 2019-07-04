@@ -274,6 +274,12 @@ export default class Canvas {
 
       this.positionCamera(displayBearing);
       renderer.render(this.scene, this.camera);
+      if (typeof this.onRenderCallback === "function") {
+        this.onRenderCallback({
+          camera: { position: this.camera.position },
+          bearing: displayBearing
+        });
+      }
       rafRef = requestAnimationFrame(loop);
     };
 
@@ -423,6 +429,10 @@ export default class Canvas {
       this.axesHelper = new AxesHelper(5000);
       this.scene.add(this.axesHelper);
     }
+  }
+
+  onRender(fn) {
+    this.onRenderCallback = fn;
   }
 }
 
