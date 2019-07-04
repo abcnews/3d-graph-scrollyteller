@@ -31,7 +31,7 @@ import {
   forceCollide
 } from "d3-force-3d";
 
-import {MeshLine, MeshLineMaterial} from "three.meshline";
+import { MeshLine, MeshLineMaterial } from "three.meshline";
 
 export default class Canvas {
   constructor(nodes, edges, panels, opts = {}) {
@@ -49,14 +49,14 @@ export default class Canvas {
 
     const { width, height, pixelRatio } = this.opts;
 
-    // const resolution = 
+    // const resolution =
 
     // Batch multiple render calls (eg. from hover events)
     this.needsRender = false;
 
     // THREE instances
     this.scene = new Scene();
-    this.scene.background = new Color(0x5f6b7a)
+    this.scene.background = new Color(0x5f6b7a);
     this.camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
     this.renderer = new WebGLRenderer();
 
@@ -126,16 +126,10 @@ export default class Canvas {
     });
 
     edges.forEach(edge => {
-      const geometry = new Geometry();
-
-      // const material = new LineBasicMaterial({
-      //   color: 0xffffff,
-      //   linewidth: 3,
-      //   transparent: true,
-      //   depthTest: false,
-      // });
-
-      const resolution = new Vector2(width, height);
+      const resolution = new Vector2(
+        width * this.opts.pixelRatio,
+        height * this.opts.pixelRatio
+      );
 
       const material = new MeshLineMaterial({
         lineWidth: 3,
@@ -145,25 +139,18 @@ export default class Canvas {
         transparent: true,
         resolution: resolution,
         near: this.camera.near,
-		    far: this.camera.far
-      })
+        far: this.camera.far
+      });
 
+      const geometry = new Geometry();
       geometry.vertices.push(
         new Vector3(edge.source.x, edge.source.y, edge.source.z),
         new Vector3(edge.target.x, edge.target.y, edge.target.z)
       );
-
-      // for( var j = 0; j < Math.PI; j += 2 * Math.PI / 100 ) {
-      //   var v = new Vector3( Math.cos( j ), Math.sin( j ), 0 );
-      //   geometry.vertices.push( v );
-      // }
-
-      // const line = new Line(geometry, material);
-
       const line = new MeshLine();
       line.setGeometry(geometry);
 
-      const lineMesh = new Mesh(line.geometry, material)
+      const lineMesh = new Mesh(line.geometry, material);
 
       lineMesh.renderOrder = 0;
 
@@ -172,6 +159,7 @@ export default class Canvas {
       edge.obj = lineMesh;
       edge.material = material;
       edge.geometry = geometry;
+      edge.line = line;
     });
 
     this.nodes = nodes;
@@ -271,11 +259,10 @@ export default class Canvas {
       // Update the edges
       edges.forEach(e => {
         // Reposition
-        e.geometry.vertices = [
-          new Vector3(e.source.x, e.source.y, e.source.z),
-          new Vector3(e.target.x, e.target.y, e.target.z)
-        ];
-        e.geometry.verticesNeedUpdate = true;
+
+        e.geometry.vertices[0].set(e.source.x, e.source.y, e.source.z);
+        e.geometry.vertices[1].set(e.target.x, e.target.y, e.target.z);
+        e.line.setGeometry(e.geometry);
 
         // Highlight
         // console.log("e.source.material.opacity", e.source.material.opacity);
