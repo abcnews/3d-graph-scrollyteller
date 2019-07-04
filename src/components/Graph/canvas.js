@@ -50,9 +50,6 @@ export default class Canvas {
     );
 
     const { width, height, pixelRatio } = this.opts;
-
-    // const resolution =
-
     // Batch multiple render calls (eg. from hover events)
     this.needsRender = false;
 
@@ -60,7 +57,7 @@ export default class Canvas {
     this.scene = new Scene();
     this.scene.background = new Color(0x5f6b7a);
     this.camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
-    this.renderer = new WebGLRenderer();
+    this.renderer = new WebGLRenderer({ antialias: true });
 
     // For some reason Interaction is applied via a constructor
     new Interaction(this.renderer, this.scene, this.camera);
@@ -147,7 +144,8 @@ export default class Canvas {
         transparent: true,
         resolution: resolution,
         near: this.camera.near,
-        far: this.camera.far
+        far: this.camera.far,
+        depthWrite: false
       });
 
       const geometry = new Geometry();
