@@ -288,6 +288,7 @@ export default class Canvas {
           bearing: displayBearing
         });
       }
+      this.needsRender = false;
       rafRef = requestAnimationFrame(loop);
     };
 
