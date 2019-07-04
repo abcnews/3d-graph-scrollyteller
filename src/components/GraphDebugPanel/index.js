@@ -3,6 +3,8 @@ import styles from "./styles.scss";
 
 export default ({ canvas }) => {
   const [data, setData] = useState();
+  const [isOrbitalMode, setIsOrbitalMode] = useState(canvas.isOrbital);
+  const [isExploreMode, setIsExploreMode] = useState(canvas.isExplore);
 
   useEffect(() => {
     canvas.onRender(setData);
@@ -15,11 +17,21 @@ export default ({ canvas }) => {
       <button onClick={() => canvas.toggleAxesHelper()}>
         Toggle Axes Helper
       </button>
-      <button onClick={() => canvas.toggleOrbitalMode()}>
-        Toggle Orbit
+      <button
+        onClick={() => {
+          setIsOrbitalMode(canvas.toggleOrbitalMode());
+          setIsExploreMode(canvas.isExplore);
+        }}
+      >
+        {isOrbitalMode ? "Disable" : "Enable"} Orbit
       </button>
-      <button onClick={() => canvas.toggleExploreMode()}>
-        Toggle Explore
+      <button
+        onClick={() => {
+          setIsExploreMode(canvas.toggleExploreMode());
+          setIsOrbitalMode(canvas.isOrbital);
+        }}
+      >
+        {isExploreMode ? "Disable" : "Enable"} Explore
       </button>
       <span>angle: {Math.round(data.bearing.angle)}; </span>
       <span>distance: {Math.round(data.bearing.distance)}; </span>

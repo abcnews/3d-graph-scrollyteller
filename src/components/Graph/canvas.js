@@ -458,27 +458,18 @@ export default class Canvas {
 
   toggleOrbitalMode() {
     this.isExplore = false; // Only one mode ad a time
-    if (this.isOrbital) {
-      this.isOrbital = false;
-      this.controls.enabled = false;
-      this.controls.autoRotate = false;
-    } else {
-      this.isOrbital = true;
-      this.controls.autoRotate = true;
-      this.controls.enabled = false;
-    }
+    this.isOrbital = !this.isOrbital;
+    this.controls.enabled = false;
+    this.controls.autoRotate = !this.isOrbital;
+    return this.isOrbital;
   }
 
   toggleExploreMode() {
     this.isOrbital = false;
-    if (this.isExplore) {
-      this.isExplore = false;
-      this.controls.enabled = false;
-    } else {
-      this.isExplore = true;
-      this.controls.autoRotate = false;
-      this.controls.enabled = true;
-    }
+    this.isExplore = !this.isExplore;
+    this.controls.enabled = this.isExplore;
+    this.controls.autoRotate = !this.isExplore;
+    return this.isExplore;
   }
 
   onRender(fn) {
