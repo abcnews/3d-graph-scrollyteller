@@ -44,8 +44,8 @@ export default class Canvas {
         width: window.innerWidth,
         height: window.innerHeight,
         pixelRatio: window.devicePixelRatio,
-        visibilityThreshold: 0,
         minOpacity: 0,
+        visibilityThreshold: 0.1,
         nodeRadius: 5
       },
       opts
