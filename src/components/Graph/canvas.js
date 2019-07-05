@@ -67,10 +67,7 @@ export default class Canvas {
     this.scene = new Scene();
     this.scene.background = new Color(0x5f6b7a);
     this.camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
-    this.renderer = new WebGLRenderer({ antialias: true });
-
-    // For some reason Interaction is applied via a constructor
-    // new Interaction(this.renderer, this.scene, this.camera);
+    this.renderer = new WebGLRenderer({ antialias: false });
 
     // Trying OrbitControls
     this.controls = new OrbitControls( this.camera, this.renderer.domElement );
@@ -104,14 +101,10 @@ export default class Canvas {
       const circle = new Sprite(circleMaterial);
       const outline = new Sprite(outlineMaterial);
 
-      node.applyHover = () => {
+      node.whenHovering = () => {
         // TODO: actually disply some kind of highlight
-        circle.material.color.setHex(0x0000ff);
+        circle.material.color = new Color(0x00ff00);
       };
-
-      node.removeHover = () => {
-        circle.material.color.setHex(DEFAULT_COLOR);
-      }
 
       outline.renderOrder = 9;
       outline.scale.setScalar(12);
@@ -279,7 +272,6 @@ export default class Canvas {
         );
 
         n.isVisible = displayOpacity > this.opts.visibilityThreshold;
-        n.progress = displayOpacity;
 
         // Only update the position if the label is actually visible
         if (n.isVisible) {
@@ -293,25 +285,24 @@ export default class Canvas {
             : 0
         );
 
-        // Set opacity
-        if (displayOpacity < 0.9) {
-          // TODO: lerp to these colours
-          n.obj.material.color.setHex(DISABLED_COLOR);
-          n.obj.renderOrder = 5;
-          n.outline.material.color.setHex(DISABLED_COLOR);
-          n.outline.renderOrder = 5;
-        } else {
-          n.obj.material.color.setHex(DEFAULT_COLOR);
+        // Set colors
+        // TODO: replace DEFAULT_COLOR with some kind of color from the marker
+        //    if you want to do special highlighting
+        let lineColor = new Color(DISABLED_COLOR).lerp(new Color(DEFAULT_COLOR), displayOpacity);
+        n.progress = displayOpacity;
+        n.obj.material.color = lineColor;
+        n.outline.material.color = lineColor;
+        if (displayOpacity > 0) {
           n.obj.renderOrder = 10;
-          n.outline.material.color.setHex(OUTLINE_COLOR);
           n.outline.renderOrder = 9;
+        } else {
+          n.obj.renderOrder = 5;
+          n.outline.renderOrder = 4;
         }
 
         // Perform hover if this node is being intersected
         if (intersections.length > 0 && n.isVisible && intersections.includes(n.obj)) {
-          n.applyHover && n.applyHover();
-        } else {
-          n.removeHover && n.removeHover();
+          n.whenHovering && n.whenHovering();
         }
       });
 
@@ -324,19 +315,17 @@ export default class Canvas {
         e.line.setGeometry(e.geometry);
 
         // Highlight
-        if (e.source.isVisible && e.target.isVisible) {
-          e.obj.material.color.setHex(DEFAULT_COLOR);
+        if (e.target.progress > 0 && e.source.progress > 0) {
+          if (e.target.progress > e.source.progress) {
+            e.material.color = e.source.outline.material.color;
+          } else {
+            e.material.color = e.target.outline.material.color;
+          }
           e.obj.renderOrder = 6;
         } else {
-          e.obj.material.color.setHex(0x000000);
+          e.obj.material.color.setHex(DISABLED_COLOR);
           e.obj.renderOrder = 0;
         }
-
-        // console.log("e.source.material.opacity", e.source.material.opacity);
-        // e.material.opacity = Math.min(
-        //   e.source.material.opacity,
-        //   e.target.material.opacity
-        // );
       });
 
       // console.log("autoBearing", autoBearing.origin);
