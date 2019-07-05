@@ -292,7 +292,7 @@ export default class Canvas {
         n.progress = displayOpacity;
         n.obj.material.color = lineColor;
         n.outline.material.color = lineColor;
-        if (displayOpacity > 0) {
+        if (displayOpacity > 0.5) {
           n.obj.renderOrder = 10;
           n.outline.renderOrder = 9;
         } else {
