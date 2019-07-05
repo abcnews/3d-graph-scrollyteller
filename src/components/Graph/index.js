@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { render } from "react-dom";
 import PropTypes from "prop-types";
 import styles from "./styles.scss";
@@ -10,6 +10,11 @@ const Graph = ({ nodes, edges, panels }) => {
 
   console.info("Graph re-render");
   console.log("panels", panels);
+
+  const toggleOrbital = () => {
+    if (!isOrbital) setIsOrbital(true);
+    else setIsOrbital(false);
+  };
 
   useEffect(() => {
     console.info("Creating canvas");

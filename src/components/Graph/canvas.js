@@ -13,9 +13,9 @@ import {
   SpriteMaterial,
   TextureLoader,
   Sprite,
-  Color
+  Color,
+  Raycaster
 } from "three";
-import { Interaction } from "three.interaction";
 
 import { easePoly } from "d3-ease";
 
@@ -33,6 +33,10 @@ import {
 } from "d3-force-3d";
 
 import { MeshLine, MeshLineMaterial } from "three.meshline";
+import styles from './styles.scss';
+
+const spriteTexture = new TextureLoader().load(require('./sprite.png'));
+const spriteHoverTexture = new TextureLoader().load(require('./sprite-hover.png'));
 
 export default class Canvas {
   constructor(nodes, edges, panels, opts = {}) {
@@ -42,8 +46,8 @@ export default class Canvas {
         width: window.innerWidth,
         height: window.innerHeight,
         pixelRatio: window.devicePixelRatio,
-        visibilityThreshold: 0,
         minOpacity: 0,
+        visibilityThreshold: 0.1,
         nodeRadius: 5
       },
       opts
@@ -53,6 +57,9 @@ export default class Canvas {
     // Batch multiple render calls (eg. from hover events)
     this.needsRender = false;
 
+    this.isOrbital = false;
+    this.isExplore = false;
+
     // THREE instances
     this.scene = new Scene();
     this.scene.background = new Color(0x5f6b7a);
@@ -60,9 +67,16 @@ export default class Canvas {
     this.renderer = new WebGLRenderer({ antialias: true });
 
     // For some reason Interaction is applied via a constructor
-    new Interaction(this.renderer, this.scene, this.camera);
+    // new Interaction(this.renderer, this.scene, this.camera);
 
-    // this.controls = new OrbitControls(camera, renderer.domElement);
+    // Trying OrbitControls
+    this.controls = new OrbitControls( this.camera, this.renderer.domElement );
+
+    this.controls.autoRotate = true;
+    this.controls.enabled = false;
+    this.controls.autoRotateSpeed = 1;
+    this.controls.enableZoom = true;
+
     this.setSize(width, height);
     this.renderer.setPixelRatio(pixelRatio);
 
@@ -78,41 +92,18 @@ export default class Canvas {
       .stop();
 
     nodes.forEach(node => {
-      const spriteTexture = new TextureLoader().load(require("./sprite.png"));
-      const spriteMaterial = new SpriteMaterial({
-        map: spriteTexture,
-        color: 0xffffff
-      });
-
-      const spriteHoverTexture = new TextureLoader().load(
-        require("./sprite-hover.png")
-      );
-      const spriteHoverMaterial = new SpriteMaterial({
-        map: spriteHoverTexture,
-        color: 0xffffff
-      });
+      const spriteMaterial = new SpriteMaterial({ map: spriteTexture, color: 0xffffff });      
 
       const circle = new Sprite(spriteMaterial);
 
-      circle.on("mouseover", e => {
-        // TODO: actually disply some kind of highlight and
-        //      text box for the hovered data
-        circle.material = spriteHoverMaterial;
+      node.applyHover = () => {
+        // TODO: actually disply some kind of highlight
+        circle.material = new SpriteMaterial({ map: spriteHoverTexture, color: 0xffffff });
+      };
 
-        const mouseEvent = e.data.originalEvent;
-
-        console.log("mouse:", mouseEvent.clientX, mouseEvent.clientY);
-        console.log(node.label, "-", node.type);
-
-        // Batch render calls
-        this.needsRender = true;
-      });
-
-      circle.on("mouseout", e => {
+      node.removeHover = () => {
         circle.material = spriteMaterial;
-        // Batch render callss
-        this.needsRender = true;
-      });
+      }
 
       circle.renderOrder = 1;
       circle.scale.setScalar(10);
@@ -123,9 +114,9 @@ export default class Canvas {
       node.material = spriteMaterial;
 
       // Labels
-      const label = document.createElement("div");
-      label.style.setProperty("position", "absolute");
-      document.querySelector("#relativeParent").appendChild(label);
+      const label = document.createElement('div');
+      label.className = styles.label;
+      document.querySelector('#relativeParent').appendChild(label);
       label.innerText = node.label;
       node.labelElement = label;
     });
@@ -137,7 +128,7 @@ export default class Canvas {
       );
 
       const material = new MeshLineMaterial({
-        lineWidth: 3,
+        lineWidth: 8,
         sizeAttenuation: 0,
         color: 0xffffff,
         opacity: 1,
@@ -172,6 +163,14 @@ export default class Canvas {
     this.edges = edges;
     this.panels = panels;
 
+    this.raycaster = new Raycaster()
+    this.mouse = new Vector2();
+    window.addEventListener('mousemove', e => {
+      e.preventDefault();
+      this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      this.mouse.y = - (e.clientY / window.innerHeight) * 2 + 1;
+    });
+
     this.loop = this.start();
   }
 
@@ -196,6 +195,13 @@ export default class Canvas {
     const loop = () => {
       const { nodes, edges, renderer, camera, simulation } = this;
 
+      // Check for hovers
+      // TODO: remember previous intersects to more accurately detect mouseout
+      this.raycaster.setFromCamera(this.mouse, this.camera);
+      const intersections = this.raycaster.intersectObjects(nodes.map(n => n.obj)).map(o => o.object);
+
+      if (intersections.length > 0) this.needsRender = true;
+
       const panelsAboveTheFold = panels.filter(panel => {
         if (!panel.element) return false;
         const box = panel.element.getBoundingClientRect();
@@ -212,7 +218,7 @@ export default class Canvas {
         Math.ceil(fold + nextPanelBounds.height - nextPanelBounds.bottom) /
         (panelSeparation + nextPanelBounds.height);
 
-      // Don't re-render on every frame, you fool.
+      // Don't re-render on every frame, unless you're auto-rotating...
       if (
         this.needsRender === false &&
         lastProgress === progress &&
@@ -221,6 +227,8 @@ export default class Canvas {
         rafRef = requestAnimationFrame(loop);
         return;
       }
+
+      this.needsRender = false;
 
       if (simulation.alpha() > simulation.alphaMin()) {
         simulation.tick();
@@ -255,20 +263,26 @@ export default class Canvas {
 
         n.isVisible = displayOpacity > this.opts.visibilityThreshold;
 
+        // Perform hover if this node is being intersected
+        if (intersections.length > 0 && n.isVisible && intersections.includes(n.obj)) {
+          n.applyHover && n.applyHover();
+        } else {
+          n.removeHover && n.removeHover();
+        }
+
         // Only update the position if the label is actually visible
         if (n.isVisible) {
           const screenPosition = worldToScreen(n.obj.position, this.camera);
-          n.labelElement.style.setProperty(
-            "transform",
-            `translate(${screenPosition.x}px, ${screenPosition.y}px)`
-          );
+          n.labelElement.style.setProperty('transform', `translate(calc(${screenPosition.x}px - 50%), ${screenPosition.y + 8 + Math.abs(screenPosition.z / 13)}px)`);
         }
 
         // Set opacity
         n.material.opacity = displayOpacity;
         n.labelElement.style.setProperty(
           "opacity",
-          displayOpacity > this.opts.visibilityThreshold ? displayOpacity : 0
+          displayOpacity > this.opts.visibilityThreshold
+            ? displayOpacity
+            : 0
         );
       });
 
@@ -294,17 +308,25 @@ export default class Canvas {
         ? prevPanel.bearing
         : this.bearingFromConfig();
       const nextBearing = nextPanel.bearing;
-      const displayBearing = lerpedBearing(prevBearing, nextBearing, progress);
+      const displayBearing = lerpedBearing(
+        prevBearing,
+        nextBearing,
+        progress
+      );
 
-      this.positionCamera(displayBearing);
-      renderer.render(this.scene, this.camera);
-      if (typeof this.onRenderCallback === "function") {
-        this.onRenderCallback({
-          camera: { position: this.camera.position },
-          bearing: displayBearing
-        });
+      if (this.isOrbital === false && this.isExplore === false) {
+        this.positionCamera(displayBearing);
+
+        if (typeof this.onRenderCallback === "function") {
+          this.onRenderCallback({
+            camera: { position: this.camera.position },
+            bearing: displayBearing
+          });
+        }
       }
       rafRef = requestAnimationFrame(loop);
+      this.controls.update();
+      renderer.render(this.scene, this.camera);
     };
 
     loop.stop = () => {
@@ -455,6 +477,22 @@ export default class Canvas {
     }
   }
 
+  toggleOrbitalMode() {
+    this.isExplore = false; // Only one mode ad a time
+    this.isOrbital = !this.isOrbital;
+    this.controls.enabled = false;
+    this.controls.autoRotate = !this.isOrbital;
+    return this.isOrbital;
+  }
+
+  toggleExploreMode() {
+    this.isOrbital = false;
+    this.isExplore = !this.isExplore;
+    this.controls.enabled = this.isExplore;
+    this.controls.autoRotate = !this.isExplore;
+    return this.isExplore;
+  }
+
   onRender(fn) {
     this.onRenderCallback = fn;
   }
@@ -498,9 +536,9 @@ function worldToScreen(vector3, camera) {
   let v = vector3.clone();
   v.project(camera);
 
-  v.x = ((v.x + 1) * window.innerWidth) / 2;
-  v.y = (-(v.y - 1) * window.innerHeight) / 2;
-  v.z = vector3.z;
-
+  v.x = (v.x + 1) * window.innerWidth / 2;
+  v.y = - (v.y - 1) * window.innerHeight / 2;
+  v.z = camera.position.distanceTo(vector3);
+  
   return v;
 }
