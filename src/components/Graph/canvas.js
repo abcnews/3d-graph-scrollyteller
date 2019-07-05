@@ -36,7 +36,10 @@ import { MeshLine, MeshLineMaterial } from "three.meshline";
 import styles from './styles.scss';
 
 const spriteTexture = new TextureLoader().load(require('./sprite.png'));
-const spriteHoverTexture = new TextureLoader().load(require('./sprite-hover.png'));
+const OUTLINE_COLOR = 0xffffff;
+const DEFAULT_COLOR = 0xffffff;
+const DISABLED_COLOR = 0x4a505b;
+
 
 export default class Canvas {
   constructor(nodes, edges, panels, opts = {}) {
@@ -64,10 +67,7 @@ export default class Canvas {
     this.scene = new Scene();
     this.scene.background = new Color(0x5f6b7a);
     this.camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
-    this.renderer = new WebGLRenderer({ antialias: true });
-
-    // For some reason Interaction is applied via a constructor
-    // new Interaction(this.renderer, this.scene, this.camera);
+    this.renderer = new WebGLRenderer({ antialias: false });
 
     // Trying OrbitControls
     this.controls = new OrbitControls( this.camera, this.renderer.domElement );
@@ -91,27 +91,33 @@ export default class Canvas {
       .force("collide", forceCollide(10))
       .stop();
 
+    //
+    // CREATE CIRCLES
+    //
     nodes.forEach(node => {
-      const spriteMaterial = new SpriteMaterial({ map: spriteTexture, color: 0xffffff });      
+      const circleMaterial = new SpriteMaterial({ map: spriteTexture, color: DEFAULT_COLOR, depthTest: false });
+      const outlineMaterial = new SpriteMaterial({ map: spriteTexture, color: OUTLINE_COLOR, depthTest: false });
 
-      const circle = new Sprite(spriteMaterial);
+      const circle = new Sprite(circleMaterial);
+      const outline = new Sprite(outlineMaterial);
 
-      node.applyHover = () => {
+      node.whenHovering = () => {
         // TODO: actually disply some kind of highlight
-        circle.material = new SpriteMaterial({ map: spriteHoverTexture, color: 0xffffff });
+        circle.material.color = new Color(0x00ff00);
       };
 
-      node.removeHover = () => {
-        circle.material = spriteMaterial;
-      }
+      outline.renderOrder = 9;
+      outline.scale.setScalar(12);
+      this.scene.add(outline);
 
-      circle.renderOrder = 1;
+      circle.renderOrder = 10;
       circle.scale.setScalar(10);
       this.scene.add(circle);
 
       // Put them on the node object so we can access them on re-renders
       node.obj = circle;
-      node.material = spriteMaterial;
+      node.outline = outline;
+      node.material = circleMaterial;
 
       // Labels
       const label = document.createElement('div');
@@ -121,6 +127,9 @@ export default class Canvas {
       node.labelElement = label;
     });
 
+    //
+    // CREATE LINES
+    //
     edges.forEach(edge => {
       const resolution = new Vector2(
         width * this.opts.pixelRatio,
@@ -243,6 +252,7 @@ export default class Canvas {
       nodes.forEach(n => {
         // Move the sprite
         n.obj.position.set(n.x, n.y, n.z);
+        n.outline.position.set(n.x, n.y, n.z);
 
         // Figure out visibility
         const previousOpacity = n.groups.reduce(
@@ -263,27 +273,37 @@ export default class Canvas {
 
         n.isVisible = displayOpacity > this.opts.visibilityThreshold;
 
-        // Perform hover if this node is being intersected
-        if (intersections.length > 0 && n.isVisible && intersections.includes(n.obj)) {
-          n.applyHover && n.applyHover();
-        } else {
-          n.removeHover && n.removeHover();
-        }
-
         // Only update the position if the label is actually visible
         if (n.isVisible) {
           const screenPosition = worldToScreen(n.obj.position, this.camera);
           n.labelElement.style.setProperty('transform', `translate(calc(${screenPosition.x}px - 50%), ${screenPosition.y + 8 + Math.abs(screenPosition.z / 13)}px)`);
         }
-
-        // Set opacity
-        n.material.opacity = displayOpacity;
         n.labelElement.style.setProperty(
           "opacity",
           displayOpacity > this.opts.visibilityThreshold
             ? displayOpacity
             : 0
         );
+
+        // Set colors
+        // TODO: replace DEFAULT_COLOR with some kind of color from the marker
+        //    if you want to do special highlighting
+        let lineColor = new Color(DISABLED_COLOR).lerp(new Color(DEFAULT_COLOR), displayOpacity);
+        n.progress = displayOpacity;
+        n.obj.material.color = lineColor;
+        n.outline.material.color = lineColor;
+        if (displayOpacity > 0) {
+          n.obj.renderOrder = 10;
+          n.outline.renderOrder = 9;
+        } else {
+          n.obj.renderOrder = 5;
+          n.outline.renderOrder = 4;
+        }
+
+        // Perform hover if this node is being intersected
+        if (intersections.length > 0 && n.isVisible && intersections.includes(n.obj)) {
+          n.whenHovering && n.whenHovering();
+        }
       });
 
       // Update the edges
@@ -295,11 +315,17 @@ export default class Canvas {
         e.line.setGeometry(e.geometry);
 
         // Highlight
-        // console.log("e.source.material.opacity", e.source.material.opacity);
-        e.material.opacity = Math.min(
-          e.source.material.opacity,
-          e.target.material.opacity
-        );
+        if (e.target.progress > 0 && e.source.progress > 0) {
+          if (e.target.progress > e.source.progress) {
+            e.material.color = e.source.outline.material.color;
+          } else {
+            e.material.color = e.target.outline.material.color;
+          }
+          e.obj.renderOrder = 6;
+        } else {
+          e.obj.material.color.setHex(DISABLED_COLOR);
+          e.obj.renderOrder = 0;
+        }
       });
 
       // console.log("autoBearing", autoBearing.origin);
