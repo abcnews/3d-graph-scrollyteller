@@ -36,7 +36,10 @@ import { MeshLine, MeshLineMaterial } from "three.meshline";
 import styles from './styles.scss';
 
 const spriteTexture = new TextureLoader().load(require('./sprite.png'));
-const spriteHoverTexture = new TextureLoader().load(require('./sprite-hover.png'));
+const OUTLINE_COLOR = 0xffffff;
+const DEFAULT_COLOR = 0xffffff;
+const DISABLED_COLOR = 0x4a505b;
+
 
 export default class Canvas {
   constructor(nodes, edges, panels, opts = {}) {
@@ -91,27 +94,37 @@ export default class Canvas {
       .force("collide", forceCollide(10))
       .stop();
 
+    //
+    // CREATE CIRCLES
+    //
     nodes.forEach(node => {
-      const spriteMaterial = new SpriteMaterial({ map: spriteTexture, color: 0xffffff });      
+      const circleMaterial = new SpriteMaterial({ map: spriteTexture, color: DEFAULT_COLOR, depthTest: false });
+      const outlineMaterial = new SpriteMaterial({ map: spriteTexture, color: OUTLINE_COLOR, depthTest: false });
 
-      const circle = new Sprite(spriteMaterial);
+      const circle = new Sprite(circleMaterial);
+      const outline = new Sprite(outlineMaterial);
 
       node.applyHover = () => {
         // TODO: actually disply some kind of highlight
-        circle.material = new SpriteMaterial({ map: spriteHoverTexture, color: 0xffffff });
+        circle.material.color.setHex(0x0000ff);
       };
 
       node.removeHover = () => {
-        circle.material = spriteMaterial;
+        circle.material.color.setHex(DEFAULT_COLOR);
       }
 
-      circle.renderOrder = 1;
+      outline.renderOrder = 9;
+      outline.scale.setScalar(12);
+      this.scene.add(outline);
+
+      circle.renderOrder = 10;
       circle.scale.setScalar(10);
       this.scene.add(circle);
 
       // Put them on the node object so we can access them on re-renders
       node.obj = circle;
-      node.material = spriteMaterial;
+      node.outline = outline;
+      node.material = circleMaterial;
 
       // Labels
       const label = document.createElement('div');
@@ -121,6 +134,9 @@ export default class Canvas {
       node.labelElement = label;
     });
 
+    //
+    // CREATE LINES
+    //
     edges.forEach(edge => {
       const resolution = new Vector2(
         width * this.opts.pixelRatio,
@@ -243,6 +259,7 @@ export default class Canvas {
       nodes.forEach(n => {
         // Move the sprite
         n.obj.position.set(n.x, n.y, n.z);
+        n.outline.position.set(n.x, n.y, n.z);
 
         // Figure out visibility
         const previousOpacity = n.groups.reduce(
@@ -262,6 +279,33 @@ export default class Canvas {
         );
 
         n.isVisible = displayOpacity > this.opts.visibilityThreshold;
+        n.progress = displayOpacity;
+
+        // Only update the position if the label is actually visible
+        if (n.isVisible) {
+          const screenPosition = worldToScreen(n.obj.position, this.camera);
+          n.labelElement.style.setProperty('transform', `translate(calc(${screenPosition.x}px - 50%), ${screenPosition.y + 8 + Math.abs(screenPosition.z / 13)}px)`);
+        }
+        n.labelElement.style.setProperty(
+          "opacity",
+          displayOpacity > this.opts.visibilityThreshold
+            ? displayOpacity
+            : 0
+        );
+
+        // Set opacity
+        if (displayOpacity < 0.9) {
+          // TODO: lerp to these colours
+          n.obj.material.color.setHex(DISABLED_COLOR);
+          n.obj.renderOrder = 5;
+          n.outline.material.color.setHex(DISABLED_COLOR);
+          n.outline.renderOrder = 5;
+        } else {
+          n.obj.material.color.setHex(DEFAULT_COLOR);
+          n.obj.renderOrder = 10;
+          n.outline.material.color.setHex(OUTLINE_COLOR);
+          n.outline.renderOrder = 9;
+        }
 
         // Perform hover if this node is being intersected
         if (intersections.length > 0 && n.isVisible && intersections.includes(n.obj)) {
@@ -269,21 +313,6 @@ export default class Canvas {
         } else {
           n.removeHover && n.removeHover();
         }
-
-        // Only update the position if the label is actually visible
-        if (n.isVisible) {
-          const screenPosition = worldToScreen(n.obj.position, this.camera);
-          n.labelElement.style.setProperty('transform', `translate(calc(${screenPosition.x}px - 50%), ${screenPosition.y + 8 + Math.abs(screenPosition.z / 13)}px)`);
-        }
-
-        // Set opacity
-        n.material.opacity = displayOpacity;
-        n.labelElement.style.setProperty(
-          "opacity",
-          displayOpacity > this.opts.visibilityThreshold
-            ? displayOpacity
-            : 0
-        );
       });
 
       // Update the edges
@@ -295,11 +324,19 @@ export default class Canvas {
         e.line.setGeometry(e.geometry);
 
         // Highlight
+        if (e.source.isVisible && e.target.isVisible) {
+          e.obj.material.color.setHex(DEFAULT_COLOR);
+          e.obj.renderOrder = 6;
+        } else {
+          e.obj.material.color.setHex(0x000000);
+          e.obj.renderOrder = 0;
+        }
+
         // console.log("e.source.material.opacity", e.source.material.opacity);
-        e.material.opacity = Math.min(
-          e.source.material.opacity,
-          e.target.material.opacity
-        );
+        // e.material.opacity = Math.min(
+        //   e.source.material.opacity,
+        //   e.target.material.opacity
+        // );
       });
 
       // console.log("autoBearing", autoBearing.origin);
