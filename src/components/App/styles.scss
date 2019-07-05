@@ -1,0 +1,59 @@
+:global {
+  // Lozenges
+  body > main p > .loz-blue,
+  #main_content p > .loz-blue {
+    background-color: #03809c;
+    // font-family: ABCSans, sans-serif;
+    font-weight: 400;
+    -moz-border-radius: 0.5em;
+    -webkit-border-radius: 0.5em;
+    border-radius: 0.5em;
+    padding-left: 7px;
+    padding-right: 7px;
+    padding-top: 2px;
+    padding-bottom: 3px;
+    // white-space: nowrap;
+    -webkit-box-decoration-break: clone;
+    -o-box-decoration-break: clone;
+    box-decoration-break: clone;
+    color: white;
+  }
+
+  body > main p > .loz-red,
+  #main_content p > .loz-red {
+    background-color: #cb4c48;
+    font-weight: 400;
+    -moz-border-radius: 0.5em;
+    -webkit-border-radius: 0.5em;
+    border-radius: 0.5em;
+    padding-left: 7px;
+    padding-right: 7px;
+    padding-top: 2px;
+    padding-bottom: 3px;
+    // white-space: nowrap;
+    -webkit-box-decoration-break: clone;
+    -o-box-decoration-break: clone;
+    box-decoration-break: clone;
+    color: white;
+    font-style: normal;
+  }
+
+  body > main p > .loz-purple,
+  #main_content p > .loz-purple {
+    background-color: #7b68c9;
+    font-weight: 400;
+    -moz-border-radius: 0.5em;
+    -webkit-border-radius: 0.5em;
+    border-radius: 0.5em;
+    padding-left: 7px;
+    padding-right: 7px;
+    padding-top: 2px;
+    padding-bottom: 3px;
+    // white-space: nowrap;
+    -webkit-box-decoration-break: clone;
+    -o-box-decoration-break: clone;
+    box-decoration-break: clone;
+    color: white;
+    font-style: normal;
+  }
+}

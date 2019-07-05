@@ -1,6 +1,9 @@
 import React from "react";
 import { render } from "react-dom";
 import App from "./components/App";
+import { spanify } from "spanify"
+
+spanify(); // Convert CoreMedia anchor-spans into span tags
 
 const PROJECT_NAME = "3d-graph-scrollyteller";
 const root = document.querySelector(`[data-${PROJECT_NAME}-root]`);
