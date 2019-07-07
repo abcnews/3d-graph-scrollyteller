@@ -109,11 +109,6 @@ export default class Canvas {
       const circle = new Sprite(circleMaterial);
       const outline = new Sprite(outlineMaterial);
 
-      node.whenHovering = () => {
-        // TODO: actually disply some kind of highlight
-        circle.material.color = new Color(0x00ff00);
-      };
-
       outline.renderOrder = 9;
       outline.scale.setScalar(12);
       this.scene.add(outline);
@@ -299,21 +294,33 @@ export default class Canvas {
         );
 
         // Set colors
-        // TODO: replace DEFAULT_COLOR with some kind of color from the marker
-        //    if you want to do special highlighting
         let lineColor = new Color(DISABLED_COLOR).lerp(
           new Color(DEFAULT_COLOR),
           displayOpacity
         );
         n.progress = displayOpacity;
-        n.obj.material.color = lineColor;
         n.outline.material.color = lineColor;
-        if (displayOpacity > 0.5) {
+        if (displayOpacity > 0.1) {
           n.obj.renderOrder = 10;
           n.outline.renderOrder = 9;
         } else {
           n.obj.renderOrder = 5;
           n.outline.renderOrder = 4;
+        }
+
+        // Inner circle is hidden unless being highlighted
+        n.obj.material.opacity = 0;
+
+        // TODO: get inner circle colour from the marker
+        // TODO: only apply if the marker has colors on it
+        if (false) {
+          const colorFromMarker = 0x00ff00;
+          let innerColor = lineColor.lerp(
+            new Color(colorFromMarker),
+            displayOpacity
+          );
+          n.obj.material.color = new Color(0xff0000);
+          n.obj.material.opacity = 1;
         }
 
         // Perform hover if this node is being intersected
@@ -322,7 +329,8 @@ export default class Canvas {
           n.isVisible &&
           intersections.includes(n.obj)
         ) {
-          n.whenHovering && n.whenHovering();
+          n.obj.material.color = new Color(0xff0000);
+          n.obj.material.opacity = 1;
         }
       });
 
