@@ -21,9 +21,7 @@ function init() {
     <App
       panels={scrollyData.panels}
       projectName={PROJECT_NAME}
-      nodeData={root.dataset.nodes}
-      edgeData={root.dataset.edges}
-      groupData={root.dataset.groups}
+      data={root.dataset.url}
     />,
     scrollyData.mountNode
   );
