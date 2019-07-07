@@ -127,7 +127,9 @@ function listMajors(auth) {
     const missingNodes = edgeNames.filter(x => !nodeNames.includes(x));
     if (unconnectedNodes.length) {
       console.error(
-        `${"Unconnected nodes:".bold} ${unconnectedNodes.join(", ")}`
+        `${"Unconnected nodes will be dropped:".bold} ${unconnectedNodes.join(
+          ", "
+        )}`
       );
     }
     if (missingNodes.length) {
@@ -166,7 +168,8 @@ function listMajors(auth) {
 
     // TODO: Make sure no edges link the same node
 
-    // TODO: Remove disconnected nodes
+    // Remove unconnected nodes
+    nodes = nodes.filter(n => !unconnectedNodes.includes(n[0]));
 
     // Re-index
     const data = {
