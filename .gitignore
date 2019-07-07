@@ -9,3 +9,6 @@
 .DS_Store
 npm-debug.log
 .envrc
+
+/scripts/.token.json
+/scripts/.credentials.json

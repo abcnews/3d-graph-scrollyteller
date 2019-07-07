@@ -9,7 +9,6 @@ const Graph = ({ nodes, edges, panels }) => {
   const canvas = useRef();
 
   console.info("Graph re-render");
-  console.log("panels", panels);
 
   const toggleOrbital = () => {
     if (!isOrbital) setIsOrbital(true);
@@ -44,7 +43,9 @@ const Graph = ({ nodes, edges, panels }) => {
     return () => window.removeEventListener("resize", resize);
   });
 
-  return <div id="relativeParent" style={{ position: 'relative' }} ref={domNode} />;
+  return (
+    <div id="relativeParent" style={{ position: "relative" }} ref={domNode} />
+  );
 };
 
 Graph.propTypes = {
