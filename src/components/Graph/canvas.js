@@ -33,10 +33,12 @@ import {
 } from "d3-force-3d";
 
 import { MeshLine, MeshLineMaterial } from "three.meshline";
-import styles from './styles.scss';
+import styles from "./styles.scss";
 
-const spriteTexture = new TextureLoader().load(require('./sprite.png'));
-const spriteHoverTexture = new TextureLoader().load(require('./sprite-hover.png'));
+const spriteTexture = new TextureLoader().load(require("./sprite.png"));
+const spriteHoverTexture = new TextureLoader().load(
+  require("./sprite-hover.png")
+);
 
 export default class Canvas {
   constructor(nodes, edges, panels, opts = {}) {
@@ -70,7 +72,7 @@ export default class Canvas {
     // new Interaction(this.renderer, this.scene, this.camera);
 
     // Trying OrbitControls
-    this.controls = new OrbitControls( this.camera, this.renderer.domElement );
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
     this.controls.autoRotate = true;
     this.controls.enabled = false;
@@ -79,7 +81,8 @@ export default class Canvas {
 
     this.setSize(width, height);
     this.renderer.setPixelRatio(pixelRatio);
-
+    console.log("edges", edges);
+    console.log("nodes", nodes);
     // Force layout
     this.simulation = forceSimulation(nodes, 3)
       .force("link", forceLink(edges).distance(30))
@@ -92,18 +95,24 @@ export default class Canvas {
       .stop();
 
     nodes.forEach(node => {
-      const spriteMaterial = new SpriteMaterial({ map: spriteTexture, color: 0xffffff });      
+      const spriteMaterial = new SpriteMaterial({
+        map: spriteTexture,
+        color: 0xffffff
+      });
 
       const circle = new Sprite(spriteMaterial);
 
       node.applyHover = () => {
         // TODO: actually disply some kind of highlight
-        circle.material = new SpriteMaterial({ map: spriteHoverTexture, color: 0xffffff });
+        circle.material = new SpriteMaterial({
+          map: spriteHoverTexture,
+          color: 0xffffff
+        });
       };
 
       node.removeHover = () => {
         circle.material = spriteMaterial;
-      }
+      };
 
       circle.renderOrder = 1;
       circle.scale.setScalar(10);
@@ -114,9 +123,9 @@ export default class Canvas {
       node.material = spriteMaterial;
 
       // Labels
-      const label = document.createElement('div');
+      const label = document.createElement("div");
       label.className = styles.label;
-      document.querySelector('#relativeParent').appendChild(label);
+      document.querySelector("#relativeParent").appendChild(label);
       label.innerText = node.label;
       node.labelElement = label;
     });
@@ -163,12 +172,12 @@ export default class Canvas {
     this.edges = edges;
     this.panels = panels;
 
-    this.raycaster = new Raycaster()
+    this.raycaster = new Raycaster();
     this.mouse = new Vector2();
-    window.addEventListener('mousemove', e => {
+    window.addEventListener("mousemove", e => {
       e.preventDefault();
       this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-      this.mouse.y = - (e.clientY / window.innerHeight) * 2 + 1;
+      this.mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
     });
 
     this.loop = this.start();
@@ -198,7 +207,9 @@ export default class Canvas {
       // Check for hovers
       // TODO: remember previous intersects to more accurately detect mouseout
       this.raycaster.setFromCamera(this.mouse, this.camera);
-      const intersections = this.raycaster.intersectObjects(nodes.map(n => n.obj)).map(o => o.object);
+      const intersections = this.raycaster
+        .intersectObjects(nodes.map(n => n.obj))
+        .map(o => o.object);
 
       if (intersections.length > 0) this.needsRender = true;
 
@@ -264,7 +275,11 @@ export default class Canvas {
         n.isVisible = displayOpacity > this.opts.visibilityThreshold;
 
         // Perform hover if this node is being intersected
-        if (intersections.length > 0 && n.isVisible && intersections.includes(n.obj)) {
+        if (
+          intersections.length > 0 &&
+          n.isVisible &&
+          intersections.includes(n.obj)
+        ) {
           n.applyHover && n.applyHover();
         } else {
           n.removeHover && n.removeHover();
@@ -273,16 +288,19 @@ export default class Canvas {
         // Only update the position if the label is actually visible
         if (n.isVisible) {
           const screenPosition = worldToScreen(n.obj.position, this.camera);
-          n.labelElement.style.setProperty('transform', `translate(calc(${screenPosition.x}px - 50%), ${screenPosition.y + 8 + Math.abs(screenPosition.z / 13)}px)`);
+          n.labelElement.style.setProperty(
+            "transform",
+            `translate(calc(${screenPosition.x}px - 50%), ${screenPosition.y +
+              8 +
+              Math.abs(screenPosition.z / 13)}px)`
+          );
         }
 
         // Set opacity
         n.material.opacity = displayOpacity;
         n.labelElement.style.setProperty(
           "opacity",
-          displayOpacity > this.opts.visibilityThreshold
-            ? displayOpacity
-            : 0
+          displayOpacity > this.opts.visibilityThreshold ? displayOpacity : 0
         );
       });
 
@@ -308,11 +326,7 @@ export default class Canvas {
         ? prevPanel.bearing
         : this.bearingFromConfig();
       const nextBearing = nextPanel.bearing;
-      const displayBearing = lerpedBearing(
-        prevBearing,
-        nextBearing,
-        progress
-      );
+      const displayBearing = lerpedBearing(prevBearing, nextBearing, progress);
 
       if (this.isOrbital === false && this.isExplore === false) {
         this.positionCamera(displayBearing);
@@ -536,9 +550,9 @@ function worldToScreen(vector3, camera) {
   let v = vector3.clone();
   v.project(camera);
 
-  v.x = (v.x + 1) * window.innerWidth / 2;
-  v.y = - (v.y - 1) * window.innerHeight / 2;
+  v.x = ((v.x + 1) * window.innerWidth) / 2;
+  v.y = (-(v.y - 1) * window.innerHeight) / 2;
   v.z = camera.position.distanceTo(vector3);
-  
+
   return v;
 }
