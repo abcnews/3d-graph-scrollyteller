@@ -30,7 +30,7 @@ import {
   forceY,
   forceZ,
   forceCollide
-} from "d3-force-3d";
+} from "../../lib/d3Force3d"; // changed from "d3-force-3d" to enable es5 transpilation
 
 import { MeshLine, MeshLineMaterial } from "three.meshline";
 import styles from "./styles.scss";
@@ -281,6 +281,11 @@ export default class Canvas {
         // Only update the position if the label is actually visible
         if (n.isVisible) {
           const screenPosition = worldToScreen(n.obj.position, this.camera);
+          n.labelElement.style.setProperty(
+            "-ms-transform",
+            `translateX(${screenPosition.x}px) translateX(-50%)
+            translateY(${screenPosition.y + 25 + (1 / screenPosition.z) * 50}px)`
+          );
           n.labelElement.style.setProperty(
             "transform",
             `translate(calc(${screenPosition.x}px - 50%), ${screenPosition.y +
