@@ -313,14 +313,17 @@ export default class Canvas {
 
         // TODO: get inner circle colour from the marker
         // TODO: only apply if the marker has colors on it
-        if (false) {
-          const colorFromMarker = 0x00ff00;
-          let innerColor = lineColor.lerp(
-            new Color(colorFromMarker),
-            displayOpacity
-          );
-          n.obj.material.color = innerColor;
-          n.obj.material.opacity = 1;
+        if (nextPanel.config.show) {
+          const highlightedCodes = [].concat(nextPanel.config.show);
+          if (highlightedCodes.filter(code => code === labelToCode(n.label))) {
+            const colorFromMarker = 0x00ff00;
+            let innerColor = lineColor.lerp(
+              new Color(colorFromMarker),
+              displayOpacity
+            );
+            n.obj.material.color = innerColor;
+            n.obj.material.opacity = 1;
+          }
         }
 
         // Perform hover if this node is being intersected
@@ -591,4 +594,8 @@ function worldToScreen(vector3, camera) {
   v.z = camera.position.distanceTo(vector3);
 
   return v;
+}
+
+function labelToCode(label) {
+  return label.toLowerCase().replace(/[^a-z]+/g, '');
 }
