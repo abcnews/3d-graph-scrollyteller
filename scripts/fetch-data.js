@@ -142,7 +142,7 @@ function listMajors(auth) {
       console.error(
         `${
           "Edges with missing nodes will be dropped:".bold
-        } ${unconnectedEdges.map(e => `${e[0]} ↔ ${e[1]}`).join(", ")}`
+        } ${unconnectedEdges.map(e => `${e[0]} ↔ ${e[1]}`).join("\n")}`
       );
     }
 
