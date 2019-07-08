@@ -283,6 +283,11 @@ export default class Canvas {
         if (n.isVisible) {
           const screenPosition = worldToScreen(n.obj.position, this.camera);
           n.labelElement.style.setProperty(
+            "-ms-transform",
+            `translateX(${screenPosition.x}px) translateX(-50%)
+            translateY(${screenPosition.y + 25 + (1 / screenPosition.z) * 50}px)`
+          );
+          n.labelElement.style.setProperty(
             "transform",
             `translate(calc(${screenPosition.x}px - 50%), ${screenPosition.y +
               25 + (1 / screenPosition.z) * 50}px)`
