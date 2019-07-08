@@ -319,7 +319,7 @@ export default class Canvas {
             new Color(colorFromMarker),
             displayOpacity
           );
-          n.obj.material.color = new Color(0xff0000);
+          n.obj.material.color = innerColor;
           n.obj.material.opacity = 1;
         }
 
