@@ -108,12 +108,14 @@ function listMajors(auth) {
     edges = edges
       .slice(1)
       .filter(e => e[7] && e[7].trim().toUpperCase() === "X")
-      .map(e => [e[0], e[1], e[2], e[3]]);
-    nodes = nodes.slice(1).map(n => [n[0], n[1]]);
+      .map(e => [e[0], e[1]]);
+    nodes = nodes
+      .slice(1)
+      .filter(n => n[4] && n[4].trim().toUpperCase() === "X")
+      .map(n => [n[0], n[3], n[4]]);
     groups = groups.slice(1).map(g => [g[0].trim().toLowerCase(), g[1] || ""]);
 
     // Some sanity checking
-
     const unique = (v, i, a) => a.indexOf(v) === i;
 
     // Do all the names in edges exist in nodes?
@@ -123,8 +125,8 @@ function listMajors(auth) {
         return names.concat(e.slice(0, 2));
       }, [])
       .filter(unique);
+
     const unconnectedNodes = nodeNames.filter(x => !edgeNames.includes(x));
-    const missingNodes = edgeNames.filter(x => !nodeNames.includes(x));
     if (unconnectedNodes.length) {
       console.error(
         `${"Unconnected nodes will be dropped:".bold} ${unconnectedNodes.join(
@@ -132,13 +134,24 @@ function listMajors(auth) {
         )}`
       );
     }
-    if (missingNodes.length) {
-      console.error(`${"Missing nodes:".red.bold} ${missingNodes.join(", ")}`);
+
+    const unconnectedEdges = edges.filter(
+      x => !nodeNames.includes(x[0]) || !nodeNames.includes(x[1])
+    );
+    if (unconnectedEdges.length) {
+      console.error(
+        `${
+          "Edges with missing nodes will be dropped:".bold
+        } ${unconnectedEdges.map(e => `${e[0]} ↔ ${e[1]}`).join(", ")}`
+      );
     }
+
+    // console.log("unconnectedNodes", unconnectedNodes);
+    // console.log("unconnectedEdges", unconnectedEdges);
 
     // Check for duplicate group names
     const count = arr =>
-      arr.reduce((a, b) => ({ ...a, [b]: (a[b] || 0) + 1 }), {}); // don't forget to initialize the accumulator
+      arr.reduce((a, b) => ({ ...a, [b]: (a[b] || 0) + 1 }), {});
     const duplicates = dict => Object.keys(dict).filter(a => dict[a] > 1);
     const groupNameDuplicates = duplicates(count(groups.map(g => g[0])));
 
@@ -171,9 +184,17 @@ function listMajors(auth) {
     // Remove unconnected nodes
     nodes = nodes.filter(n => !unconnectedNodes.includes(n[0]));
 
+    // Remove unconnected edges
+    edges = edges.filter(
+      x => nodeNames.includes(x[0]) && nodeNames.includes(x[1])
+    );
+
+    // console.log("nodes", nodes);
+    // console.log("edges", edges);
+
     // Re-index
     const data = {
-      nodes: nodes.map(n => n[0]),
+      nodes: nodes.map(n => [n[0], n[3], n[5]]),
       edges: edges.map(e => [
         nodes.map(n => n[0]).indexOf(e[0]),
         nodes.map(n => n[0]).indexOf(e[1])
@@ -181,7 +202,10 @@ function listMajors(auth) {
       groups: groups.map(group => {
         return [
           group[0],
-          group[1].split(",").map(n => nodes.map(n => n[0]).indexOf(n.trim()))
+          group[1]
+            .split(",")
+            .map(n => nodes.map(n => n[0]).indexOf(n.trim()))
+            .filter(n => n > -1)
         ];
       })
     };
