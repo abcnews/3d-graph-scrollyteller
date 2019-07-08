@@ -30,8 +30,7 @@ import {
   forceY,
   forceZ,
   forceCollide
-} from "../../lib/d3Force3d";
-// } from "d3-force-3d";
+} from "../../lib/d3Force3d"; // changed from "d3-force-3d" to enable es5 transpilation
 
 import { MeshLine, MeshLineMaterial } from "three.meshline";
 import styles from "./styles.scss";
