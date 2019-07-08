@@ -1,5 +1,5 @@
-module.exports = {
-  serve: {
-    hot: false
-  }
-};
+// module.exports = {
+//   serve: {
+//     hot: false
+//   }
+// };
