@@ -284,8 +284,7 @@ export default class Canvas {
           n.labelElement.style.setProperty(
             "transform",
             `translate(calc(${screenPosition.x}px - 50%), ${screenPosition.y +
-              8 +
-              Math.abs(screenPosition.z / 13)}px)`
+              25 + (1 / screenPosition.z) * 50}px)`
           );
         }
         n.labelElement.style.setProperty(
