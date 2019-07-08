@@ -14,9 +14,9 @@ export default ({ panels, data }) => {
       .then(({ nodes, edges, groups }) => {
         setNodes(
           nodes.map((n, i) => ({
-            label: n[1],
-            shortLabel: n[3] || n[1],
-            highlightColor: n[2],
+            label: n[0],
+            shortLabel: n[2] || n[0],
+            highlightColor: n[1],
             groups: groups.map(([name, membership]) => {
               return membership.includes(i) ? name : undefined;
             })
