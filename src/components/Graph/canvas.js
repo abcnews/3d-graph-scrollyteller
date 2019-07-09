@@ -449,7 +449,8 @@ export default class Canvas {
   dispose() {
     this.stop();
     console.info("Dispose");
-    const { nodes, edges, scene, renderer } = this;
+    const { nodes, edges, scene, renderer, controls } = this;
+    controls.dispose();
     nodes.forEach(n => {
       n.material.dispose();
     });
