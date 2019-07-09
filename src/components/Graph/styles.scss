@@ -17,6 +17,47 @@
   font-size: 18px;
   color: white;
   font-weight: bold;
-  text-shadow: 0 2px 4px black;
-  
+  text-shadow: 
+        /* first layer at 1px */
+        -1px -1px 0px #444,
+         0px -1px 0px #444,
+         1px -1px 0px #444,
+        -1px  0px 0px #444,
+         1px  0px 0px #444,
+        -1px  1px 0px #444,
+         0px  1px 0px #444,
+         1px  1px 0px #444,
+        /* second layer at 2px */
+        -2px -2px 0px #444,
+        -1px -2px 0px #444,
+         0px -2px 0px #444,
+         1px -2px 0px #444,
+         2px -2px 0px #444,
+         2px -1px 0px #444,
+         2px  0px 0px #444,
+         2px  1px 0px #444,
+         2px  2px 0px #444,
+         1px  2px 0px #444,
+         0px  2px 0px #444,
+        -1px  2px 0px #444,
+        -2px  2px 0px #444,
+        -2px  1px 0px #444,
+        -2px  0px 0px #444,
+        -2px -1px 0px #444;
+  letter-spacing: 0.05em;
+  background-color: rgba(200, 200, 200, 0.8);
+  font-weight: 400;
+  -moz-border-radius: 0.5em;
+  -webkit-border-radius: 0.5em;
+  border-radius: 0.5em;
+  padding-left: 7px;
+  padding-right: 7px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+  // white-space: nowrap;
+  -webkit-box-decoration-break: clone;
+  -o-box-decoration-break: clone;
+  box-decoration-break: clone;
+  color: white;
+  font-style: normal;
 }
