@@ -29,7 +29,7 @@ export default ({ panels, data }) => {
 
   // TODO: Add loading indicator
   return (
-    <Scrollyteller panels={panels} onMarker={() => {}}>
+    <Scrollyteller panels={panels} onMarker={() => {}} panelClassName={"scrollyteller-panel"}>
       {nodes && edges ? (
         <Graph nodes={nodes} edges={edges} panels={panels} />
       ) : null}
