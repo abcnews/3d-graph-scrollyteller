@@ -351,7 +351,7 @@ export default class Canvas {
           n.isVisible &&
           intersections.includes(n.obj)
         ) {
-          n.obj.material.color = new Color(0xff0000);
+          n.obj.material.color = new Color(n.highlightColor || 0xffffff);
           n.obj.material.opacity = 1;
         }
       });
