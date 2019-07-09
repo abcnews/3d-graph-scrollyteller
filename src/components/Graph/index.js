@@ -17,7 +17,25 @@ const Graph = ({ nodes, edges, panels }) => {
 
   useEffect(() => {
     console.info("Creating canvas");
-    canvas.current = new Canvas(nodes, edges, panels);
+    const scrollyConf = panels[0].config;
+    const config = {};
+    [
+      "width",
+      "height",
+      "pixelRatio",
+      "minOpacity",
+      "visibilityThreshold",
+      "nodeRadius",
+      "edgeDistance",
+      "chargeStrength"
+    ].reduce((config, option) => {
+      const key = option.toLowerCase();
+      if (scrollyConf[key]) config[option] = scrollyConf[key];
+      return config;
+    }, {});
+
+    canvas.current = new Canvas(nodes, edges, panels, config);
+
     return () => canvas.current.dispose();
   }, [nodes, edges, canvas]);
 

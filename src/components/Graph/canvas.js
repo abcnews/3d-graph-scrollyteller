@@ -39,7 +39,7 @@ import styles from "./styles.scss";
 const spriteTexture = new TextureLoader().load(require("./sprite.png"));
 const OUTLINE_COLOR = 0xffffff;
 const DEFAULT_COLOR = 0xffffff;
-const DISABLED_COLOR = 0x4a505b;
+const DISABLED_COLOR = 0x5f6b7a;
 
 export default class Canvas {
   constructor(nodes, edges, panels, opts = {}) {
@@ -49,9 +49,11 @@ export default class Canvas {
         width: window.innerWidth,
         height: window.innerHeight,
         pixelRatio: window.devicePixelRatio,
-        minOpacity: 0,
+        minOpacity: 0.1,
         visibilityThreshold: 0.1,
-        nodeRadius: 5
+        nodeRadius: 5,
+        edgeDistance: 60,
+        chargeStrength: -300
       },
       opts
     );
@@ -83,13 +85,15 @@ export default class Canvas {
     console.log("nodes", nodes);
     // Force layout
     this.simulation = forceSimulation(nodes, 3)
-      .force("link", forceLink(edges).distance(30))
-      .force("charge", forceManyBody().strength(-100))
-      // .force("center", forceCenter())
+      .force("link", forceLink(edges).distance(this.opts.edgeDistance))
+      .force("charge", forceManyBody().strength(this.opts.chargeStrength))
       .force("x", forceX())
       .force("y", forceY())
       .force("z", forceZ())
-      .force("collide", forceCollide(10))
+      .force(
+        "collide",
+        forceCollide().radius(n => n.radius || this.opts.nodeRadius)
+      )
       .stop();
 
     //
@@ -286,7 +290,9 @@ export default class Canvas {
           n.labelElement.style.setProperty(
             "-ms-transform",
             `translateX(${screenPosition.x}px) translateX(-50%)
-            translateY(${screenPosition.y + 25 + (1 / screenPosition.z) * 50}px)`
+            translateY(${screenPosition.y +
+              25 +
+              (1 / screenPosition.z) * 50}px)`
           );
           n.labelElement.style.setProperty(
             "transform",
@@ -520,9 +526,9 @@ export default class Canvas {
     bounds.setFromPoints(nodes.map(n => n.point));
     bounds.getSize(dims);
 
-    const width = Math.max(dims.x, nodeRadius * 3);
-    const height = Math.max(dims.y, nodeRadius * 3);
-    const depth = Math.max(dims.z, nodeRadius * 3);
+    const width = Math.max(dims.x, nodeRadius * 7);
+    const height = Math.max(dims.y, nodeRadius * 7);
+    const depth = Math.max(dims.z, nodeRadius * 7);
     // console.log("width, height, depth", width, height, depth);
 
     const phi =
