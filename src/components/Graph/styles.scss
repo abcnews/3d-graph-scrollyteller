@@ -16,34 +16,34 @@
   font-family: ABCSans, Arial, Helvetica, sans-serif;
   font-size: 18px;
   color: white;
-  font-weight: bold;
+  font-weight: normal;
   text-shadow: 
         /* first layer at 1px */
-        -1px -1px 0px #444,
-         0px -1px 0px #444,
-         1px -1px 0px #444,
-        -1px  0px 0px #444,
-         1px  0px 0px #444,
-        -1px  1px 0px #444,
-         0px  1px 0px #444,
-         1px  1px 0px #444,
+        -1px -1px 0px #666,
+         0px -1px 0px #666,
+         1px -1px 0px #666,
+        -1px  0px 0px #666,
+         1px  0px 0px #666,
+        -1px  1px 0px #666,
+         0px  1px 0px #666,
+         1px  1px 0px #666,
         /* second layer at 2px */
-        -2px -2px 0px #444,
-        -1px -2px 0px #444,
-         0px -2px 0px #444,
-         1px -2px 0px #444,
-         2px -2px 0px #444,
-         2px -1px 0px #444,
-         2px  0px 0px #444,
-         2px  1px 0px #444,
-         2px  2px 0px #444,
-         1px  2px 0px #444,
-         0px  2px 0px #444,
-        -1px  2px 0px #444,
-        -2px  2px 0px #444,
-        -2px  1px 0px #444,
-        -2px  0px 0px #444,
-        -2px -1px 0px #444;
+        -2px -2px 1px #666,
+        -1px -2px 1px #666,
+         0px -2px 1px #666,
+         1px -2px 1px #666,
+         2px -2px 1px #666,
+         2px -1px 1px #666,
+         2px  0px 1px #666,
+         2px  1px 1px #666,
+         2px  2px 1px #666,
+         1px  2px 1px #666,
+         0px  2px 1px #666,
+        -1px  2px 1px #666,
+        -2px  2px 1px #666,
+        -2px  1px 1px #666,
+        -2px  0px 1px #666,
+        -2px -1px 1px #666;
   letter-spacing: 0.05em;
   background-color: rgba(200, 200, 200, 0.8);
   font-weight: 400;
@@ -60,4 +60,5 @@
   box-decoration-break: clone;
   color: white;
   font-style: normal;
+  transition: background-color 400ms;
 }

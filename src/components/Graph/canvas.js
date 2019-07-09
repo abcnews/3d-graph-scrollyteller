@@ -323,13 +323,21 @@ export default class Canvas {
         if (nextPanel.config.show) {
           const highlightedCodes = [].concat(nextPanel.config.show);
           if (highlightedCodes.filter(code => code === labelToCode(n.label))) {
-            const colorFromMarker = 0x00ff00;
+            const colorFromMarker = 0xffff00;
             let innerColor = lineColor.lerp(
               new Color(colorFromMarker),
               displayOpacity
             );
             n.obj.material.color = innerColor;
             n.obj.material.opacity = 1;
+
+            if (n.highlightColor) {
+              n.labelElement.style.setProperty("background-color", n.highlightColor);
+            }
+          }
+        } else {
+          if (n.highlightColor) {
+            n.labelElement.style.removeProperty("background-color");
           }
         }
 
