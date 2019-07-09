@@ -324,11 +324,11 @@ export default class Canvas {
         // TODO: only apply if the marker has colors on it
         if (nextPanel.config.show) {
           const highlightedCodes = [].concat(nextPanel.config.show);
-          if (highlightedCodes.filter(code => code === labelToCode(n.label))) {
+          if (highlightedCodes.filter(code => code === labelToCode(n.label)).length > 0) {
             const colorFromMarker = 0x00ff00;
-            let innerColor = lineColor.lerp(
+            let innerColor = lineColor.clone().lerp(
               new Color(colorFromMarker),
-              displayOpacity
+              progress
             );
             n.obj.material.color = innerColor;
             n.obj.material.opacity = 1;
