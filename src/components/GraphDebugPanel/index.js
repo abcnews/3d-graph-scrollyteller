@@ -36,13 +36,18 @@ export default ({ canvas }) => {
       >
         {isExploreMode ? "Disable" : "Enable"} Explore
       </button>
-      <span> angle: {Math.round(data.bearing.angle)};</span>
-      <span> elevation: {Math.round(data.bearing.elevation)};</span>
-      <span> distance: {Math.round(data.bearing.distance)};</span>
-      <span> origin.x: {Math.round(data.bearing.origin.x)};</span>
-      <span> origin.y: {Math.round(data.bearing.origin.y)};</span>
-      <span> origin.z: {Math.round(data.bearing.origin.z)};</span>
-      <span> camera.position: {JSON.stringify(data.camera.position)}</span>
+      <span>angle: {Math.round(data.bearing.angle)}</span>
+      <span>elevation: {Math.round(data.bearing.elevation)}</span>
+      <span>distance: {Math.round(data.bearing.distance)}</span>
+      <span>
+        origin: {Math.round(data.bearing.origin.x)},
+        {Math.round(data.bearing.origin.y)},{Math.round(data.bearing.origin.z)}
+      </span>
+      <span>
+        camera: {Math.round(data.camera.position.x)},
+        {Math.round(data.camera.position.y)},
+        {Math.round(data.camera.position.z)}
+      </span>
     </div>
   );
 };
