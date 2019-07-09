@@ -325,8 +325,9 @@ export default class Canvas {
         if (nextPanel.config.show) {
           const highlightedCodes = [].concat(nextPanel.config.show);
           if (
-            highlightedCodes.filter(code => code === labelToCode(n.label))
-              .length > 0
+            highlightedCodes.filter(
+              code => code === labelToCode(n.label)
+            ).length > 0
           ) {
             const colorFromMarker = n.highlightColor || 0xffffff;
             let innerColor = lineColor
@@ -336,7 +337,11 @@ export default class Canvas {
             n.obj.material.opacity = 1;
 
             if (n.highlightColor) {
-              n.labelElement.style.setProperty("background-color", n.highlightColor);
+              const rgbColor = hexToRgb(n.highlightColor);
+              n.labelElement.style.setProperty(
+                "background-color",
+                `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.3)`
+              );
             }
           }
         } else {
@@ -673,4 +678,19 @@ function deg2rad(deg) {
 
 function rad2deg(rad) {
   return rad * (180 / Math.PI);
+}
+
+function hexToRgb(hex) {
+  // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+  var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+  hex = hex.replace(shorthandRegex, function(m, r, g, b) {
+    return r + r + g + g + b + b;
+  });
+
+  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
 }
