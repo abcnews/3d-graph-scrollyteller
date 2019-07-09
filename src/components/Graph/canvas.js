@@ -326,7 +326,7 @@ export default class Canvas {
           const highlightedCodes = [].concat(nextPanel.config.show);
           if (highlightedCodes.filter(code => code === labelToCode(n.label))) {
             const colorFromMarker = 0x00ff00;
-            let innerColor = lineColor.lerp(
+            let innerColor = lineColor.clone().lerp(
               new Color(colorFromMarker),
               displayOpacity
             );
