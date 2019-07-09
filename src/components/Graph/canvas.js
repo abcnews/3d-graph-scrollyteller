@@ -334,6 +334,14 @@ export default class Canvas {
               .lerp(new Color(colorFromMarker), progress);
             n.obj.material.color = innerColor;
             n.obj.material.opacity = 1;
+
+            if (n.highlightColor) {
+              n.labelElement.style.setProperty("background-color", n.highlightColor);
+            }
+          }
+        } else {
+          if (n.highlightColor) {
+            n.labelElement.style.removeProperty("background-color");
           }
         }
 
