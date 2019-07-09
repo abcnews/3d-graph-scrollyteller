@@ -286,13 +286,15 @@ export default class Canvas {
           n.labelElement.style.setProperty(
             "-ms-transform",
             `translateX(${screenPosition.x}px) translateX(-50%)
-            translateY(${screenPosition.y + 25 + (1 / screenPosition.z) * 50}px)`
+            translateY(${screenPosition.y +
+              10 +
+              (1 / screenPosition.z) * 4000}px)`
           );
           n.labelElement.style.setProperty(
             "transform",
             `translate(calc(${screenPosition.x}px - 50%), ${screenPosition.y +
-              25 +
-              (1 / screenPosition.z) * 50}px)`
+              10 +
+              (1 / screenPosition.z) * 4000}px)`
           );
         }
         n.labelElement.style.setProperty(
