@@ -112,7 +112,7 @@ function listMajors(auth) {
     nodes = nodes
       .slice(1)
       .filter(n => n[4] && n[4].trim().toUpperCase() === "X")
-      .map(n => [n[0], n[3], n[4]]);
+      .map(n => [n[0], n[3], n[5]]);
     groups = groups.slice(1).map(g => [g[0].trim().toLowerCase(), g[1] || ""]);
 
     // Some sanity checking
@@ -194,7 +194,7 @@ function listMajors(auth) {
 
     // Re-index
     const data = {
-      nodes: nodes.map(n => [n[0], n[3], n[5]]),
+      nodes,
       edges: edges.map(e => [
         nodes.map(n => n[0]).indexOf(e[0]),
         nodes.map(n => n[0]).indexOf(e[1])
