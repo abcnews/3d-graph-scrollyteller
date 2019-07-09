@@ -108,6 +108,14 @@ export const OrbitControls = function(object, domElement) {
     return spherical.theta;
   };
 
+  this.getRadius = function() {
+    return spherical.radius;
+  };
+
+  this.setTarget = function(vec) {
+    scope.target.copy(vec);
+  };
+
   this.saveState = function() {
     scope.target0.copy(scope.target);
     scope.position0.copy(scope.object.position);

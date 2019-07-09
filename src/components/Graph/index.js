@@ -29,7 +29,7 @@ const Graph = ({ nodes, edges, panels }) => {
       import("../GraphDebugPanel").then(module => {
         const GraphDebugPanel = module.default;
         const node = document.createElement("div");
-        domNode.current.appendChild(node);
+        document.body.appendChild(node);
         render(<GraphDebugPanel canvas={canvas.current} />, node);
       });
     }

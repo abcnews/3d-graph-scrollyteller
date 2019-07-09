@@ -14,7 +14,8 @@ import {
   TextureLoader,
   Sprite,
   Color,
-  Raycaster
+  Raycaster,
+  Box3Helper
 } from "three";
 
 import { easePoly } from "d3-ease";
@@ -236,7 +237,8 @@ export default class Canvas {
       if (
         this.needsRender === false &&
         lastProgress === progress &&
-        simulation.alpha() <= simulation.alphaMin()
+        simulation.alpha() <= simulation.alphaMin() &&
+        (!this.isOrbital && !this.isExplore)
       ) {
         rafRef = requestAnimationFrame(loop);
         return;
@@ -289,7 +291,8 @@ export default class Canvas {
           n.labelElement.style.setProperty(
             "transform",
             `translate(calc(${screenPosition.x}px - 50%), ${screenPosition.y +
-              25 + (1 / screenPosition.z) * 50}px)`
+              25 +
+              (1 / screenPosition.z) * 50}px)`
           );
         }
         n.labelElement.style.setProperty(
@@ -371,19 +374,30 @@ export default class Canvas {
       const nextBearing = nextPanel.bearing;
       const displayBearing = lerpedBearing(prevBearing, nextBearing, progress);
 
+      if (this.helper) {
+        this.scene.remove(this.helper);
+      }
+      if (this.showOriginHelper) {
+        this.helper = new Box3Helper(nextBearing.bounds, 0xffff00);
+        this.scene.add(this.helper);
+      }
+
       if (this.isOrbital === false && this.isExplore === false) {
         this.positionCamera(displayBearing);
-
-        if (typeof this.onRenderCallback === "function") {
-          this.onRenderCallback({
-            camera: { position: this.camera.position },
-            bearing: displayBearing
-          });
-        }
+      } else {
+        this.controls.update();
       }
       rafRef = requestAnimationFrame(loop);
-      this.controls.update();
       renderer.render(this.scene, this.camera);
+      if (typeof this.onRenderCallback === "function") {
+        this.onRenderCallback({
+          camera: { position: this.camera.position },
+          bearing:
+            this.isOrbital || this.isExplore
+              ? this.bearingFromControls()
+              : displayBearing
+        });
+      }
     };
 
     loop.stop = () => {
@@ -396,13 +410,21 @@ export default class Canvas {
   }
 
   positionCamera(bearing) {
+    // console.log("bearing", bearing);
     const { camera } = this;
-    const { angle, origin, distance, phi } = bearing;
-    const rad = (angle * Math.PI) / 180;
-    camera.position.x = origin.x + Math.cos(rad) * distance;
-    camera.position.z = origin.z + Math.sin(rad) * distance;
-    camera.position.y = origin.y + Math.sin(rad) * Math.sin(phi) * distance;
+    const { angle, elevation, origin, distance } = bearing;
+    const radAngle = deg2rad(angle);
+    const radElevation = deg2rad(elevation);
+
+    const x = origin.x + Math.cos(radAngle) * Math.sin(radElevation) * distance;
+    const y = origin.y + Math.sin(radAngle) * Math.sin(radElevation) * distance;
+    const z = origin.z + Math.cos(radAngle) * distance;
+    // console.log("x,y,x", x, y, x);
+    camera.position.x = x;
+    camera.position.y = y;
+    camera.position.z = z;
     camera.lookAt(origin);
+    this.controls.setTarget(origin);
   }
 
   stop() {
@@ -453,16 +475,26 @@ export default class Canvas {
     };
   }
 
+  bearingFromControls() {
+    return {
+      origin: this.controls.target,
+      angle: rad2deg(this.controls.getAzimuthalAngle()),
+      elevation: rad2deg(this.controls.getPolarAngle()),
+      distance: this.controls.getRadius()
+    };
+  }
+
   bearingFromConfig(config) {
     if (!config)
       return {
         origin: { x: 0, y: 0, z: 0 },
         angle: 0,
-        phi: 0.523599, // 30deg
+        elevation: 30,
         distance: 500
       };
 
-    const bounds = new Box3();
+    const { nodeRadius } = this.opts;
+
     const nodes = this.nodes
       .map(n => {
         const { x, y, z } = n;
@@ -478,20 +510,26 @@ export default class Canvas {
       })
       .filter(n => n.isVisible);
 
-    nodes.forEach(n => bounds.expandByPoint(n.point));
+    // Make sure there's something to use for the origin.
+    if (nodes.length === 0) {
+      nodes.push({ point: new Vector3(0, 0, 0), isVisible: true });
+    }
 
+    const bounds = new Box3();
     const dims = new Vector3();
+    bounds.setFromPoints(nodes.map(n => n.point));
     bounds.getSize(dims);
-    const width = dims.x || 1;
-    const height = dims.y || 1;
-    const depth = dims.z || 1;
+
+    const width = Math.max(dims.x, nodeRadius * 3);
+    const height = Math.max(dims.y, nodeRadius * 3);
+    const depth = Math.max(dims.z, nodeRadius * 3);
+    // console.log("width, height, depth", width, height, depth);
 
     const phi =
       (-Math.PI / 2) * Math.pow(Math.E, -height / (2 * (depth + width)));
-    // console.log("phi", phi);
-    // console.log("dims", dims);
-    const theta = (-Math.PI / 2) * Math.pow(Math.E, -depth / width);
 
+    const theta = (-Math.PI / 2) * Math.pow(Math.E, -depth / width);
+    // console.log("phi, theta", phi, theta);
     const radius = Math.max(
       width / Math.atan(Math.PI / 5),
       depth / Math.atan(Math.PI / 5),
@@ -500,27 +538,31 @@ export default class Canvas {
 
     const center = new Vector3();
     bounds.getCenter(center);
+
     const defaults = {
       origin: center,
-      angle: theta * (180 / Math.PI),
-      phi,
+      angle: rad2deg(theta),
+      elevation: rad2deg(phi),
       distance: radius
     };
 
-    const { origin, angle, distance, x, y, z } = config;
-    const node = this.nodes.find(
-      (node, idx) => idx === +origin || node.label === origin
-    ) || { x: 0, y: 0, z: 0 };
+    const { origin, angle, elevation, distance, x, y, z } = config;
+    const node =
+      this.nodes.find(
+        (node, idx) =>
+          idx === +origin || node.label === origin || node.shortLabel === origin
+      ) || {};
 
     return {
       origin: {
-        x: x || node.x || defaults.origin.x || 0,
-        y: y || node.y || defaults.origin.y || 0,
-        z: z || node.z || defaults.origin.z || 0
+        x: x || node.x || defaults.origin.x,
+        y: y || node.y || defaults.origin.y,
+        z: z || node.z || defaults.origin.z
       },
-      angle: +angle || defaults.angle || 0,
-      phi: +phi || defaults.phi || 0,
-      distance: +distance || defaults.distance || 500
+      angle: +angle || defaults.angle,
+      elevation: +elevation || defaults.elevation,
+      distance: +distance || defaults.distance,
+      bounds
     };
   }
 
@@ -532,13 +574,20 @@ export default class Canvas {
       this.axesHelper = new AxesHelper(5000);
       this.scene.add(this.axesHelper);
     }
+    this.needsRender = true;
+  }
+
+  toggleOriginHelper() {
+    this.showOriginHelper = !this.showOriginHelper;
+    this.needsRender = true;
   }
 
   toggleOrbitalMode() {
     this.isExplore = false; // Only one mode ad a time
     this.isOrbital = !this.isOrbital;
     this.controls.enabled = false;
-    this.controls.autoRotate = !this.isOrbital;
+    this.controls.autoRotate = this.isOrbital;
+    this.needsRender = true;
     return this.isOrbital;
   }
 
@@ -547,6 +596,7 @@ export default class Canvas {
     this.isExplore = !this.isExplore;
     this.controls.enabled = this.isExplore;
     this.controls.autoRotate = !this.isExplore;
+    this.needsRender = true;
     return this.isExplore;
   }
 
@@ -569,7 +619,7 @@ function lerpedBearing(a, b, pct) {
       a.origin.z + (b.origin.z - a.origin.z) * pct
     ),
     angle: a.angle + (b.angle - a.angle) * pct,
-    phi: a.phi + (b.phi - a.phi) * pct,
+    elevation: a.elevation + (b.elevation - a.elevation) * pct,
     distance: a.distance + (b.distance - a.distance) * pct
   };
 }
@@ -601,5 +651,13 @@ function worldToScreen(vector3, camera) {
 }
 
 function labelToCode(label) {
-  return label.toLowerCase().replace(/[^a-z]+/g, '');
+  return label.toLowerCase().replace(/[^a-z]+/g, "");
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI / 180);
+}
+
+function rad2deg(rad) {
+  return rad * (180 / Math.PI);
 }
