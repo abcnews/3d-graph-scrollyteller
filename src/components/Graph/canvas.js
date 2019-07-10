@@ -223,17 +223,29 @@ export default class Canvas {
         return box.height !== 0 && box.top < fold;
       });
 
-      const nextPanelIndex = panelsAboveTheFold.length - 1;
-      const nextPanel = panelsAboveTheFold[nextPanelIndex] || panels[0];
-      const prevPanel = panels[nextPanelIndex - 1];
+      const prevPanelIndex = panelsAboveTheFold.length - 1;
+      const prevPanel = panelsAboveTheFold[prevPanelIndex];
+      const nextPanel = panels[prevPanelIndex + 1];
 
-      const nextPanelBounds = nextPanel.element.getBoundingClientRect();
+      let progress;
 
-      const progress =
-        Math.ceil(fold + nextPanelBounds.height - nextPanelBounds.bottom) /
-        (panelSeparation + nextPanelBounds.height);
+      if (prevPanel) {
+        const prevPanelBounds = prevPanel.element.getBoundingClientRect();
+        progress =
+          Math.ceil(fold + prevPanelBounds.height - prevPanelBounds.bottom) /
+          (panelSeparation + prevPanelBounds.height);
+      } else if (nextPanel) {
+        const nextPanelBounds = nextPanel.element.getBoundingClientRect();
+        progress = Math.max(
+          0,
+          1 - Math.ceil(nextPanelBounds.top - fold) / fold
+        );
+      } else {
+        progress = 1;
+      }
 
       // Don't re-render on every frame, unless you're auto-rotating...
+
       if (
         this.needsRender === false &&
         lastProgress === progress &&
@@ -268,7 +280,7 @@ export default class Canvas {
         );
 
         const targetOpacity = n.groups.reduce(
-          opacityReducer(nextPanel.config),
+          opacityReducer(nextPanel ? nextPanel.config : {}),
           this.opts.minOpacity
         );
 
@@ -281,20 +293,23 @@ export default class Canvas {
         n.isVisible = displayOpacity > this.opts.visibilityThreshold;
 
         // Only update the position if the label is actually visible
+
         if (n.isVisible) {
-          const screenPosition = worldToScreen(n.obj.position, this.camera);
+          const position = n.obj.position.clone();
+          position.y = position.y - this.opts.nodeRadius * 1.2;
+          const screenPosition = worldToScreen(position, this.camera);
+
           n.labelElement.style.setProperty(
             "-ms-transform",
-            `translateX(${screenPosition.x}px) translateX(-50%)
-            translateY(${screenPosition.y +
-              10 +
-              (1 / screenPosition.z) * 4000}px)`
+            `translateX(${screenPosition.x}px) translateX(-50%) translateY(${
+              screenPosition.y
+            }px)`
           );
           n.labelElement.style.setProperty(
             "transform",
-            `translate(calc(${screenPosition.x}px - 50%), ${screenPosition.y +
-              10 +
-              (1 / screenPosition.z) * 4000}px)`
+            `translate(calc(${screenPosition.x}px - 50%), ${
+              screenPosition.y
+            }px)`
           );
         }
         n.labelElement.style.setProperty(
@@ -322,12 +337,11 @@ export default class Canvas {
 
         // TODO: get inner circle colour from the marker
         // TODO: only apply if the marker has colors on it
-        if (nextPanel.config.show) {
+        if (nextPanel && nextPanel.config.show) {
           const highlightedCodes = [].concat(nextPanel.config.show);
           if (
-            highlightedCodes.filter(
-              code => code === labelToCode(n.label)
-            ).length > 0
+            highlightedCodes.filter(code => code === labelToCode(n.label))
+              .length > 0
           ) {
             const colorFromMarker = n.highlightColor || 0xffffff;
             let innerColor = lineColor
@@ -388,7 +402,9 @@ export default class Canvas {
       const prevBearing = prevPanel
         ? prevPanel.bearing
         : this.bearingFromConfig();
-      const nextBearing = nextPanel.bearing;
+      const nextBearing = nextPanel
+        ? nextPanel.bearing
+        : this.bearingFromConfig();
       const displayBearing = lerpedBearing(prevBearing, nextBearing, progress);
 
       if (this.helper) {
@@ -541,7 +557,6 @@ export default class Canvas {
     const width = Math.max(dims.x, nodeRadius * 3);
     const height = Math.max(dims.y, nodeRadius * 3);
     const depth = Math.max(dims.z, nodeRadius * 3);
-    // console.log("width, height, depth", width, height, depth);
 
     const phi =
       (-Math.PI / 2) * Math.pow(Math.E, -height / (2 * (depth + width)));
