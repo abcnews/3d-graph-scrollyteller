@@ -54,7 +54,7 @@
   padding-right: 7px;
   padding-top: 3px;
   padding-bottom: 3px;
-  // white-space: nowrap;
+  white-space: normal;
   -webkit-box-decoration-break: clone;
   -o-box-decoration-break: clone;
   box-decoration-break: clone;
@@ -64,6 +64,7 @@
   max-width: 200px;
   text-align: center;
   line-height: 1.3em;
+  display: inline-block;
 }
 
 @media (min-width:641px) {

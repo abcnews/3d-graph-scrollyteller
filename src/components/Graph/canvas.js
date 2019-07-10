@@ -129,7 +129,33 @@ export default class Canvas {
       document.querySelector("#relativeParent").appendChild(label);
       label.innerText = node.label;
       node.labelElement = label;
+
+      
     });
+
+    // Using css max-width leaves width as max-width
+    // This uses a trick to fit the bounds snug to the wrapped text
+    let d = document.querySelectorAll("." + styles.label),
+      i,
+      w,
+      labelWidth,
+      labelHeight;
+
+    for (i = 0; i < d.length; i++) {
+      labelWidth = d[i].offsetWidth;
+      labelHeight = d[i].offsetHeight;
+
+      for (w = labelWidth; w; w--) {
+        d[i].style.width = w + "px";
+        if (d[i].offsetHeight !== labelHeight) break;
+      }
+
+      if (w < d[i].scrollWidth) {
+        d[i].style.width = d[i].style.maxWidth = d[i].scrollWidth + "px";
+      } else {
+        d[i].style.width = w + 1 + "px";
+      }
+    }
 
     //
     // CREATE LINES
