@@ -545,7 +545,7 @@ export default class Canvas {
   }
 
   bearingFromConfig(config) {
-    if (!config)
+    if (!config || !config.func)
       return {
         origin: { x: 0, y: 0, z: 0 },
         angle: 0,
@@ -618,11 +618,20 @@ export default class Canvas {
         y: y || node.y || defaults.origin.y,
         z: z || node.z || defaults.origin.z
       },
-      angle: +angle || defaults.angle,
-      elevation: +elevation || defaults.elevation,
+      angle: this.parseConfNumbber(angle) || defaults.angle,
+      elevation: this.parseConfNumbber(elevation) || defaults.elevation,
       distance: +distance || defaults.distance,
       bounds
     };
+  }
+
+  parseConfNumbber(str) {
+    if (!str) return str;
+    const components = `${str}`.split("m");
+    if (components.length === 2) {
+      return +components[1] * -1;
+    }
+    return +components[0];
   }
 
   toggleAxesHelper() {
@@ -702,6 +711,7 @@ function worldToScreen(vector3, camera) {
   let v = vector3.clone();
   v.project(camera);
 
+  // TODO: This needs to be a class function because it should use the viz height/width rather than window
   v.x = ((v.x + 1) * window.innerWidth) / 2;
   v.y = (-(v.y - 1) * window.innerHeight) / 2;
   v.z = camera.position.distanceTo(vector3);
