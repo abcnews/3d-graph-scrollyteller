@@ -111,11 +111,11 @@ export default class Canvas {
       const outline = new Sprite(outlineMaterial);
 
       outline.renderOrder = 9;
-      outline.scale.setScalar(12);
+      outline.scale.setScalar(this.opts.nodeRadius * 1.2);
       this.scene.add(outline);
 
       circle.renderOrder = 10;
-      circle.scale.setScalar(10);
+      circle.scale.setScalar(this.opts.nodeRadius);
       this.scene.add(circle);
 
       // Put them on the node object so we can access them on re-renders
