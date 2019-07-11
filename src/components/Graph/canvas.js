@@ -126,7 +126,6 @@ export default class Canvas {
       // Put them on the node object so we can access them on re-renders
       node.obj = circle;
       node.outline = outline;
-      node.material = circleMaterial;
 
       // Labels
       const label = document.createElement("div");
@@ -205,7 +204,6 @@ export default class Canvas {
     this.nodes = nodes;
     this.edges = edges;
     this.panels = panels;
-
     this.raycaster = new Raycaster();
     this.mouse = new Vector2();
 
@@ -370,14 +368,13 @@ export default class Canvas {
         // TODO: only apply if the marker has colors on it
         if (nextPanel && nextPanel.config.show) {
           const highlightedCodes = [].concat(nextPanel.config.show);
-          if (
-            highlightedCodes.filter(code => code === labelToCode(n.label))
-              .length > 0
-          ) {
+
+          if (highlightedCodes.some(code => code === labelToCode(n.label))) {
             const colorFromMarker = colours[n.highlightColor] || 0xffffff;
             let innerColor = lineColor
               .clone()
               .lerp(new Color(colorFromMarker), progress);
+
             n.obj.material.color = innerColor;
             n.obj.material.opacity = 1;
 
@@ -520,7 +517,8 @@ export default class Canvas {
     const { nodes, edges, scene, renderer, controls } = this;
     controls.dispose();
     nodes.forEach(n => {
-      n.material.dispose();
+      n.obj.material.dispose();
+      n.outline.material.dispose();
     });
     edges.forEach(e => {
       e.material.dispose();
