@@ -474,14 +474,14 @@ export default class Canvas {
   }
 
   positionCamera(bearing) {
-    // console.log("bearing", bearing);
     const { camera } = this;
     const { angle, elevation, origin, distance } = bearing;
+
     const theta = deg2rad(angle);
     const phi = deg2rad(elevation);
 
-    const y = origin.y + Math.sin(theta) * Math.sin(phi) * distance;
-    const x = origin.x + Math.cos(theta) * distance;
+    const x = origin.x + Math.sin(theta) * Math.sin(phi) * distance;
+    const y = origin.y + Math.cos(phi) * distance;
     const z = origin.z + Math.cos(theta) * Math.sin(phi) * distance;
 
     camera.position.x = x;
@@ -583,7 +583,7 @@ export default class Canvas {
 
     // Make sure there's something to use for the origin.
     if (nodes.length === 0) {
-      nodes.push({ point: new Vector3(0, 0, 0), isVisible: true });
+      nodes.push(...this.nodes);
     }
 
     const bounds = new Box3();
@@ -595,11 +595,15 @@ export default class Canvas {
     const height = Math.max(dims.y, nodeRadius * 7);
     const depth = Math.max(dims.z, nodeRadius * 7);
 
-    const phi =
-      (-Math.PI / 2) * Math.pow(Math.E, -height / (2 * (depth + width)));
+    const getPhi = (height, depth, width) =>
+      (Math.PI / 2) * Math.pow(Math.E, (-2 * (depth + width)) / height);
+    const phi = getPhi(height, depth, width);
 
-    const theta = (-Math.PI / 2) * Math.pow(Math.E, -depth / width);
-    // console.log("phi, theta", phi, theta);
+    const getTheta = (depth, width) =>
+      (Math.PI / 2) * Math.pow(Math.E, -depth / width);
+
+    const theta = getTheta(depth, width);
+
     const radius = Math.max(
       width / Math.atan(Math.PI / 5),
       depth / Math.atan(Math.PI / 5),
