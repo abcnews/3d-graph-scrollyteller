@@ -20,6 +20,8 @@ import {
 
 import { easePoly } from "d3-ease";
 
+import { getKeyframePanels, getProgressBetween } from "./utils";
+
 import { OrbitControls } from "../../lib/OrbitControls";
 
 import {
@@ -42,9 +44,9 @@ const DEFAULT_COLOR = 0xffffff;
 const DISABLED_COLOR = 0x4a505b;
 
 const colours = {
-  red: "#cb4c48",
-  blue: "#03809c",
-  purple: "#7b68c9"
+  red: 0xcb4c48,
+  blue: 0x03809c,
+  purple: 0x7b68c9
 };
 
 export default class Canvas {
@@ -223,11 +225,41 @@ export default class Canvas {
     // Work out which panel is the current one
     const fold = window.innerHeight * 0.8;
 
-    const panels = this.panels.map(p => ({
-      ...p,
-      element: p.nodes[0].parentElement,
-      bearing: this.bearingFromConfig(p.config)
-    }));
+    const panels = this.panels.map(p => {
+      const reducer = opacityReducer(p.config);
+      return {
+        ...p,
+        element: p.nodes[0].parentElement,
+        bearing: this.bearingFromConfig(p.config),
+        nodeVisibilities: this.nodes.map((n, i) => {
+          return n.groups.reduce(reducer, this.opts.minOpacity);
+        }),
+        nodeColours: this.nodes.map((n, i) => {
+          const isHighlighted = []
+            .concat(p.config.show)
+            .some(code => code === labelToCode(n.label));
+
+          const visibility = n.groups.reduce(reducer, this.opts.minOpacity);
+
+          const innerColor = isHighlighted
+            ? colours[n.highlightColor] || DEFAULT_COLOR
+            : DEFAULT_COLOR;
+
+          const res = {
+            isHighlighted,
+            inner: new Color(DISABLED_COLOR).lerp(
+              new Color(innerColor),
+              visibility
+            ),
+            outer: new Color(DISABLED_COLOR).lerp(
+              new Color(OUTLINE_COLOR),
+              visibility
+            )
+          };
+          return res;
+        })
+      };
+    });
 
     const panelSeparation = getPanelSeparation(
       panels[0].element,
@@ -243,44 +275,26 @@ export default class Canvas {
       const intersections = this.raycaster
         .intersectObjects(nodes.map(n => n.obj))
         .map(o => o.object);
-
       if (intersections.length > 0) this.needsRender = true;
 
-      const panelsAboveTheFold = panels.filter(panel => {
-        if (!panel.element) return false;
-        const box = panel.element.getBoundingClientRect();
-        return box.height !== 0 && box.top < fold;
-      });
+      const [prevPanel, nextPanel] = getKeyframePanels(panels, fold);
 
-      const prevPanelIndex = panelsAboveTheFold.length - 1;
-      const prevPanel = panelsAboveTheFold[prevPanelIndex];
-      const nextPanel = panels[prevPanelIndex + 1];
+      const progress = getProgressBetween(
+        prevPanel,
+        nextPanel,
+        fold,
+        panelSeparation
+      );
 
-      let progress;
+      this.needsRender =
+        this.needsRender ||
+        lastProgress !== progress ||
+        simulation.alpha() > simulation.alphaMin() ||
+        this.isOrbital ||
+        this.isExplore;
 
-      if (prevPanel) {
-        const prevPanelBounds = prevPanel.element.getBoundingClientRect();
-        progress =
-          Math.ceil(fold + prevPanelBounds.height - prevPanelBounds.bottom) /
-          (panelSeparation + prevPanelBounds.height);
-      } else if (nextPanel) {
-        const nextPanelBounds = nextPanel.element.getBoundingClientRect();
-        progress = Math.max(
-          0,
-          1 - Math.ceil(nextPanelBounds.top - fold) / fold
-        );
-      } else {
-        progress = 1;
-      }
-
-      // Don't re-render on every frame, unless you're auto-rotating...
-
-      if (
-        this.needsRender === false &&
-        lastProgress === progress &&
-        simulation.alpha() <= simulation.alphaMin() &&
-        (!this.isOrbital && !this.isExplore)
-      ) {
+      // By here we must know if a re-render is required.
+      if (this.needsRender === false) {
         rafRef = requestAnimationFrame(loop);
         return;
       }
@@ -297,99 +311,73 @@ export default class Canvas {
       lastProgress = progress;
 
       // Modify nodes
-      nodes.forEach(n => {
+      nodes.forEach((n, i) => {
+        //
+        // Interpolate stuff
+        //
+
+        // Figure out visibility
+        const prevVisibility = prevPanel ? prevPanel.nodeVisibilities[i] : 0;
+        const nextVisibility = nextPanel ? nextPanel.nodeVisibilities[i] : 0;
+
+        // Lerp the visibbility
+        n.visibility =
+          prevVisibility +
+          (nextVisibility - prevVisibility) * easePoly(progress, 4);
+
+        n.isVisible = n.visibility > this.opts.visibilityThreshold;
+
+        // Figure the color
+        const defaultColours = {
+          isHighlighted: false,
+          highlight: DEFAULT_COLOR,
+          outline: OUTLINE_COLOR
+        };
+        const prevColors = prevPanel
+          ? prevPanel.nodeColours[i]
+          : Object.assign({}, defaultColours);
+        const nextColors = nextPanel
+          ? nextPanel.nodeColours[i]
+          : Object.assign({}, defaultColours);
+
+        n.outerColor = new Color(prevColors.outer).lerp(
+          new Color(nextColors.outer),
+          progress
+        );
+
+        n.innerColor = new Color(prevColors.inner).lerp(
+          new Color(nextColors.inner),
+          progress
+        );
+
+        const isHighlighted =
+          prevColors.isHighlighted || nextColors.isHighlighted;
+
+        //
+        // Update stuff
+        //
+
         // Move the sprite
         n.obj.position.set(n.x, n.y, n.z);
         n.outline.position.set(n.x, n.y, n.z);
 
-        // Figure out visibility
-        const previousOpacity = n.groups.reduce(
-          opacityReducer(prevPanel ? prevPanel.config : {}),
-          this.opts.minOpacity
-        );
+        // Labels
+        this.updateNodeLabel(n);
 
-        const targetOpacity = n.groups.reduce(
-          opacityReducer(nextPanel ? nextPanel.config : {}),
-          this.opts.minOpacity
-        );
+        // Node colours
+        n.outline.material.color = n.outerColor;
+        n.obj.material.color = n.innerColor;
 
-        const displayOpacity = lerpedOpacity(
-          previousOpacity,
-          targetOpacity,
-          progress
-        );
+        // Inner circle is hidden unless being highlighted
+        n.obj.material.opacity = isHighlighted ? 1 : 0;
 
-        n.isVisible = displayOpacity > this.opts.visibilityThreshold;
-
-        // Only update the position if the label is actually visible
-
-        if (n.isVisible) {
-          const position = n.obj.position.clone();
-          position.y = position.y - this.opts.nodeRadius * 1.2;
-          const screenPosition = worldToScreen(position, this.camera);
-
-          n.labelElement.style.setProperty(
-            "-ms-transform",
-            `translateX(${screenPosition.x}px) translateX(-50%) translateY(${
-              screenPosition.y
-            }px)`
-          );
-          n.labelElement.style.setProperty(
-            "transform",
-            `translate(calc(${screenPosition.x}px - 50%), ${
-              screenPosition.y
-            }px)`
-          );
-        }
-        n.labelElement.style.setProperty(
-          "opacity",
-          displayOpacity > this.opts.visibilityThreshold ? displayOpacity : 0
-        );
-
-        // Set colors
-        let lineColor = new Color(DISABLED_COLOR).lerp(
-          new Color(DEFAULT_COLOR),
-          displayOpacity
-        );
-        n.progress = displayOpacity;
-        n.outline.material.color = lineColor;
-        if (displayOpacity > 0.1) {
+        // Render order for foregrounding of activated nodes
+        if (n.visibility > this.opts.visibilityThreshold) {
           n.obj.renderOrder = 10;
           n.outline.renderOrder = 9;
         } else {
           n.obj.renderOrder = 5;
           n.outline.renderOrder = 4;
-        }
-
-        // Inner circle is hidden unless being highlighted
-        n.obj.material.opacity = 0;
-
-        // TODO: get inner circle colour from the marker
-        // TODO: only apply if the marker has colors on it
-        if (nextPanel && nextPanel.config.show) {
-          const highlightedCodes = [].concat(nextPanel.config.show);
-
-          if (highlightedCodes.some(code => code === labelToCode(n.label))) {
-            const colorFromMarker = colours[n.highlightColor] || 0xffffff;
-            let innerColor = lineColor
-              .clone()
-              .lerp(new Color(colorFromMarker), progress);
-
-            n.obj.material.color = innerColor;
-            n.obj.material.opacity = 1;
-
-            if (n.highlightColor) {
-              const rgbColor = hexToRgb(colours[n.highlightColor]);
-              n.labelElement.style.setProperty(
-                "background-color",
-                `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.3)`
-              );
-            }
-          }
-        } else {
-          if (n.highlightColor) {
-            n.labelElement.style.removeProperty("background-color");
-          }
         }
 
         // Perform hover if this node is being intersected
@@ -414,8 +402,8 @@ export default class Canvas {
         e.line.setGeometry(e.geometry);
 
         // Highlight
-        if (e.target.progress > 0 && e.source.progress > 0) {
-          if (e.target.progress > e.source.progress) {
+        if (e.target.visibility > 0 && e.source.visibility > 0) {
+          if (e.target.visibility > e.source.visibility) {
             e.material.color = e.source.outline.material.color;
           } else {
             e.material.color = e.target.outline.material.color;
@@ -471,6 +459,38 @@ export default class Canvas {
     loop();
 
     return loop;
+  }
+
+  updateNodeLabel(n) {
+    // Only update the position if the label is actually visible
+    if (n.isVisible) {
+      const position = n.obj.position.clone();
+      position.y = position.y - this.opts.nodeRadius * 1.2;
+      const screenPosition = worldToScreen(position, this.camera);
+
+      n.labelElement.style.setProperty(
+        "-ms-transform",
+        `translateX(${screenPosition.x}px) translateX(-50%) translateY(${
+          screenPosition.y
+        }px)`
+      );
+
+      n.labelElement.style.setProperty(
+        "transform",
+        `translate(calc(${screenPosition.x}px - 50%), ${screenPosition.y}px)`
+      );
+
+      n.labelElement.style.setProperty(
+        "background-color",
+        `rgba(${n.innerColor.r * 255}, ${n.innerColor.g * 255}, ${n.innerColor
+          .b * 255}, 0.3)`
+      );
+    }
+
+    n.labelElement.style.setProperty(
+      "opacity",
+      n.visibility > this.opts.visibilityThreshold ? n.visibility : 0
+    );
   }
 
   positionCamera(bearing) {
