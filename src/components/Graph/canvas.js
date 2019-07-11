@@ -85,8 +85,7 @@ export default class Canvas {
 
     this.setSize(width, height);
     this.renderer.setPixelRatio(pixelRatio);
-    console.log("edges", edges);
-    console.log("nodes", nodes);
+
     // Force layout
     this.simulation = forceSimulation(nodes, 3)
       .force("link", forceLink(edges).distance(30))
@@ -127,7 +126,6 @@ export default class Canvas {
       // Put them on the node object so we can access them on re-renders
       node.obj = circle;
       node.outline = outline;
-      node.material = circleMaterial;
 
       // Labels
       const label = document.createElement("div");
@@ -139,6 +137,7 @@ export default class Canvas {
 
     // Using css max-width leaves width as max-width
     // This uses a trick to fit the bounds snug to the wrapped text
+    //  TODO: is there any reason to do this outside the nodes.forEach above?
     let d = document.querySelectorAll("." + styles.label),
       i,
       w,
@@ -205,9 +204,9 @@ export default class Canvas {
     this.nodes = nodes;
     this.edges = edges;
     this.panels = panels;
-
     this.raycaster = new Raycaster();
     this.mouse = new Vector2();
+
     window.addEventListener("mousemove", e => {
       e.preventDefault();
       this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -429,14 +428,13 @@ export default class Canvas {
         // TODO: only apply if the marker has colors on it
         if (nextPanel && nextPanel.config.show) {
           const highlightedCodes = [].concat(nextPanel.config.show);
-          if (
-            highlightedCodes.filter(code => code === labelToCode(n.label))
-              .length > 0
-          ) {
+
+          if (highlightedCodes.some(code => code === labelToCode(n.label))) {
             const colorFromMarker = colours[n.highlightColor] || 0xffffff;
             let innerColor = lineColor
               .clone()
               .lerp(new Color(colorFromMarker), progress);
+
             n.obj.material.color = innerColor;
             n.obj.material.opacity = 1;
 
@@ -517,6 +515,7 @@ export default class Canvas {
       }
       rafRef = requestAnimationFrame(loop);
       renderer.render(this.scene, this.camera);
+      this.needsRender = false;
       if (typeof this.onRenderCallback === "function") {
         this.onRenderCallback({
           camera: { position: this.camera.position },
@@ -541,17 +540,19 @@ export default class Canvas {
     // console.log("bearing", bearing);
     const { camera } = this;
     const { angle, elevation, origin, distance } = bearing;
-    const radAngle = deg2rad(angle);
-    const radElevation = deg2rad(elevation);
+    const theta = deg2rad(angle);
+    const phi = deg2rad(elevation);
 
-    const x = origin.x + Math.cos(radAngle) * Math.sin(radElevation) * distance;
-    const y = origin.y + Math.sin(radAngle) * Math.sin(radElevation) * distance;
-    const z = origin.z + Math.cos(radAngle) * distance;
-    // console.log("x,y,x", x, y, x);
+    const y = origin.y + Math.sin(theta) * Math.sin(phi) * distance;
+    const x = origin.x + Math.cos(theta) * distance;
+    const z = origin.z + Math.cos(theta) * Math.sin(phi) * distance;
+
     camera.position.x = x;
     camera.position.y = y;
     camera.position.z = z;
+
     camera.lookAt(origin);
+
     this.controls.setTarget(origin);
   }
 
@@ -580,7 +581,8 @@ export default class Canvas {
     const { nodes, edges, scene, renderer, controls } = this;
     controls.dispose();
     nodes.forEach(n => {
-      n.material.dispose();
+      n.obj.material.dispose();
+      n.outline.material.dispose();
     });
     edges.forEach(e => {
       e.material.dispose();
@@ -588,6 +590,9 @@ export default class Canvas {
     });
     scene.dispose();
     renderer.dispose();
+
+    // Remove event listeners
+    // TODO: mousemove event setup in constructor.
   }
 
   visibilityFromConfig(config) {
@@ -737,14 +742,13 @@ export default class Canvas {
     return this.isExplore;
   }
 
+  // Set a callback function to call on every render.
   onRender(fn) {
     this.onRenderCallback = fn;
   }
 }
 
 function lerpedOpacity(a, b, pct) {
-  // console.log("a,b,pct", a, b, pct);
-
   return a + (b - a) * easePoly(pct, 4);
 }
 

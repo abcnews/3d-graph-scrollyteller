@@ -2,7 +2,7 @@ import "./lib/polyfills";
 import React from "react";
 import { render } from "react-dom";
 import App from "./components/App";
-import { spanify } from "spanify"
+import { spanify } from "spanify";
 
 spanify(); // Convert CoreMedia anchor-spans into span tags
 
