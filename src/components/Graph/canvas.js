@@ -586,9 +586,9 @@ export default class Canvas {
     bounds.setFromPoints(nodes.map(n => n.point));
     bounds.getSize(dims);
 
-    const width = Math.max(dims.x, nodeRadius * 3);
-    const height = Math.max(dims.y, nodeRadius * 3);
-    const depth = Math.max(dims.z, nodeRadius * 3);
+    const width = Math.max(dims.x, nodeRadius * 7);
+    const height = Math.max(dims.y, nodeRadius * 7);
+    const depth = Math.max(dims.z, nodeRadius * 7);
 
     const phi =
       (-Math.PI / 2) * Math.pow(Math.E, -height / (2 * (depth + width)));
