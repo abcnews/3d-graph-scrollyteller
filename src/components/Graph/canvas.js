@@ -72,8 +72,7 @@ export default class Canvas {
     // THREE instances
     this.scene = new Scene();
     this.scene.background = new Color(0x5f6b7a);
-    this.camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
-    this.camera.fov = 60;
+    this.camera = new PerspectiveCamera(60, width / height, 0.1, 1000);
     this.renderer = new WebGLRenderer({ antialias: false });
 
     // Trying OrbitControls
