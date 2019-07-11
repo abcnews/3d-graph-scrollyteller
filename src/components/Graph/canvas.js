@@ -477,17 +477,19 @@ export default class Canvas {
     // console.log("bearing", bearing);
     const { camera } = this;
     const { angle, elevation, origin, distance } = bearing;
-    const radAngle = deg2rad(angle);
-    const radElevation = deg2rad(elevation);
+    const theta = deg2rad(angle);
+    const phi = deg2rad(elevation);
 
-    const x = origin.x + Math.cos(radAngle) * Math.sin(radElevation) * distance;
-    const y = origin.y + Math.sin(radAngle) * Math.sin(radElevation) * distance;
-    const z = origin.z + Math.cos(radAngle) * distance;
-    // console.log("x,y,x", x, y, x);
+    const y = origin.y + Math.sin(theta) * Math.sin(phi) * distance;
+    const x = origin.x + Math.cos(theta) * distance;
+    const z = origin.z + Math.cos(theta) * Math.sin(phi) * distance;
+
     camera.position.x = x;
     camera.position.y = y;
     camera.position.z = z;
+
     camera.lookAt(origin);
+
     this.controls.setTarget(origin);
   }
 
