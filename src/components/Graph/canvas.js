@@ -15,7 +15,9 @@ import {
   Sprite,
   Color,
   Raycaster,
-  Box3Helper
+  Box3Helper,
+  SphereGeometry,
+  MeshBasicMaterial
 } from "three";
 
 import { easePoly } from "d3-ease";
@@ -85,6 +87,9 @@ export default class Canvas {
 
     this.setSize(width, height);
     this.renderer.setPixelRatio(pixelRatio);
+
+    // Listeners
+    this.boundHandleKeyDown = this.handleKeyDown.bind(this);
 
     // Force layout
     this.simulation = forceSimulation(nodes, 3)
@@ -217,62 +222,7 @@ export default class Canvas {
 
     // TODO: remove this
     // FLY AROUND!
-    window.addEventListener('keydown', e => {
-      this.isFlying = true;
-
-      const ESC = 27;
-
-      const UP = 38;
-      const DOWN = 40;
-      const LEFT = 37;
-      const RIGHT = 39;
-      const W = 87;
-      const A = 65;
-      const S = 83;
-      const D = 68;
-
-      if ([UP, DOWN, LEFT, RIGHT, W, A, S, D, ESC].includes(e.keyCode)) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-
-      switch (e.keyCode) {
-        case UP:
-          this.currentBearing.angle += 1;
-          console.log('angle:', this.currentBearing.angle);
-          break;
-        case DOWN:
-          this.currentBearing.angle -= 1;
-          console.log('angle:', this.currentBearing.angle);
-          break;
-        case LEFT:
-          this.currentBearing.elevation += 1;
-          console.log('evelation:', this.currentBearing.elevation);
-          break;
-        case RIGHT:
-          this.currentBearing.elevation -= 1;
-          console.log('evelation:', this.currentBearing.elevation);
-          break;
-        case W:
-          this.currentBearing.distance -= 1;
-          console.log('distance:', this.currentBearing.distance);
-          break;
-        case S:
-          this.currentBearing.distance += 1;
-          console.log('distance:', this.currentBearing.distance);
-          break;
-        case A:
-          break;
-        case D:
-          break;
-        case ESC:
-          this.isFlying = false;
-          break;
-      }
-
-      this.positionCamera(this.currentBearing);
-      this.needsRender = true;
-    });
+    window.addEventListener("keydown", this.boundHandleKeyDown);
     // /TODO
   }
 
@@ -498,11 +448,24 @@ export default class Canvas {
       const displayBearing = lerpedBearing(prevBearing, nextBearing, progress);
 
       if (this.helper) {
-        this.scene.remove(this.helper);
+        this.scene.remove(this.helper.bounds);
+        this.scene.remove(this.helper.point);
       }
       if (this.showOriginHelper) {
-        this.helper = new Box3Helper(nextBearing.bounds, 0xffff00);
-        this.scene.add(this.helper);
+        const geometry = new SphereGeometry(3);
+        const material = new MeshBasicMaterial({ color: 0xffff00 });
+        const sphere = new Mesh(geometry, material);
+        sphere.position.set(
+          nextBearing.origin.x,
+          nextBearing.origin.y,
+          nextBearing.origin.z
+        );
+        this.helper = {
+          bounds: new Box3Helper(nextBearing.bounds, 0xffff00),
+          point: sphere
+        };
+        this.scene.add(this.helper.bounds);
+        this.scene.add(this.helper.point);
       }
 
       if (this.isOrbital === false && this.isExplore === false) {
@@ -534,6 +497,63 @@ export default class Canvas {
     loop();
 
     return loop;
+  }
+
+  handleKeyDown(e) {
+    const ESC = 27;
+
+    const UP = 38;
+    const DOWN = 40;
+    const LEFT = 37;
+    const RIGHT = 39;
+    const W = 87;
+    const A = 65;
+    const S = 83;
+    const D = 68;
+
+    if ([UP, DOWN, LEFT, RIGHT, W, A, S, D, ESC].includes(e.keyCode)) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.isFlying = true;
+    }
+
+    switch (e.keyCode) {
+      case UP:
+        this.currentBearing.angle += 1;
+        console.log("angle:", this.currentBearing.angle);
+        break;
+      case DOWN:
+        this.currentBearing.angle -= 1;
+        console.log("angle:", this.currentBearing.angle);
+        break;
+      case LEFT:
+        this.currentBearing.elevation += 1;
+        console.log("evelation:", this.currentBearing.elevation);
+        break;
+      case RIGHT:
+        this.currentBearing.elevation -= 1;
+        console.log("evelation:", this.currentBearing.elevation);
+        break;
+      case W:
+        this.currentBearing.distance -= 1;
+        console.log("distance:", this.currentBearing.distance);
+        break;
+      case S:
+        this.currentBearing.distance += 1;
+        console.log("distance:", this.currentBearing.distance);
+        break;
+      case A:
+        break;
+      case D:
+        break;
+      case ESC:
+        this.isFlying = false;
+        this.currentBearing = null;
+        break;
+    }
+
+    this.positionCamera(this.currentBearing);
+    this.needsRender = true;
   }
 
   positionCamera(bearing) {
@@ -593,6 +613,7 @@ export default class Canvas {
 
     // Remove event listeners
     // TODO: mousemove event setup in constructor.
+    window.removeEventListener("keydown", this.boundHandleKeyDown);
   }
 
   visibilityFromConfig(config) {
