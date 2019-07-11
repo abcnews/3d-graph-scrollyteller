@@ -138,6 +138,7 @@ export default class Canvas {
 
     // Using css max-width leaves width as max-width
     // This uses a trick to fit the bounds snug to the wrapped text
+    //  TODO: is there any reason to do this outside the nodes.forEach above?
     let d = document.querySelectorAll("." + styles.label),
       i,
       w,
@@ -207,6 +208,7 @@ export default class Canvas {
 
     this.raycaster = new Raycaster();
     this.mouse = new Vector2();
+
     window.addEventListener("mousemove", e => {
       e.preventDefault();
       this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -526,6 +528,9 @@ export default class Canvas {
     });
     scene.dispose();
     renderer.dispose();
+
+    // Remove event listeners
+    // TODO: mousemove event setup in constructor.
   }
 
   visibilityFromConfig(config) {
@@ -675,14 +680,13 @@ export default class Canvas {
     return this.isExplore;
   }
 
+  // Set a callback function to call on every render.
   onRender(fn) {
     this.onRenderCallback = fn;
   }
 }
 
 function lerpedOpacity(a, b, pct) {
-  // console.log("a,b,pct", a, b, pct);
-
   return a + (b - a) * easePoly(pct, 4);
 }
 
