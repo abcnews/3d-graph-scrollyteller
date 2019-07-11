@@ -41,6 +41,12 @@ const OUTLINE_COLOR = 0xffffff;
 const DEFAULT_COLOR = 0xffffff;
 const DISABLED_COLOR = 0x4a505b;
 
+const colours = {
+  red: "#cb4c48",
+  blue: "#03809c",
+  purple: "#7b68c9"
+};
+
 export default class Canvas {
   constructor(nodes, edges, panels, opts = {}) {
     this.opts = Object.assign(
@@ -369,7 +375,7 @@ export default class Canvas {
             highlightedCodes.filter(code => code === labelToCode(n.label))
               .length > 0
           ) {
-            const colorFromMarker = n.highlightColor || 0xffffff;
+            const colorFromMarker = colours[n.highlightColor] || 0xffffff;
             let innerColor = lineColor
               .clone()
               .lerp(new Color(colorFromMarker), progress);
@@ -377,7 +383,7 @@ export default class Canvas {
             n.obj.material.opacity = 1;
 
             if (n.highlightColor) {
-              const rgbColor = hexToRgb(n.highlightColor);
+              const rgbColor = hexToRgb(colours[n.highlightColor]);
               n.labelElement.style.setProperty(
                 "background-color",
                 `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.3)`
@@ -396,7 +402,9 @@ export default class Canvas {
           n.isVisible &&
           intersections.includes(n.obj)
         ) {
-          n.obj.material.color = new Color(n.highlightColor || 0xffffff);
+          n.obj.material.color = new Color(
+            colours[n.highlightColor] || 0xffffff
+          );
           n.obj.material.opacity = 1;
         }
       });
