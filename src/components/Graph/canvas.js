@@ -215,6 +215,66 @@ export default class Canvas {
     });
 
     this.loop = this.start();
+
+    // TODO: remove this
+    // FLY AROUND!
+    window.addEventListener('keydown', e => {
+      this.isFlying = true;
+
+      const ESC = 27;
+
+      const UP = 38;
+      const DOWN = 40;
+      const LEFT = 37;
+      const RIGHT = 39;
+      const W = 87;
+      const A = 65;
+      const S = 83;
+      const D = 68;
+
+      if ([UP, DOWN, LEFT, RIGHT, W, A, S, D, ESC].includes(e.keyCode)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      switch (e.keyCode) {
+        case UP:
+          this.currentBearing.angle += 1;
+          console.log('angle:', this.currentBearing.angle);
+          break;
+        case DOWN:
+          this.currentBearing.angle -= 1;
+          console.log('angle:', this.currentBearing.angle);
+          break;
+        case LEFT:
+          this.currentBearing.elevation += 1;
+          console.log('evelation:', this.currentBearing.elevation);
+          break;
+        case RIGHT:
+          this.currentBearing.elevation -= 1;
+          console.log('evelation:', this.currentBearing.elevation);
+          break;
+        case W:
+          this.currentBearing.distance -= 1;
+          console.log('distance:', this.currentBearing.distance);
+          break;
+        case S:
+          this.currentBearing.distance += 1;
+          console.log('distance:', this.currentBearing.distance);
+          break;
+        case A:
+          break;
+        case D:
+          break;
+        case ESC:
+          this.isFlying = false;
+          break;
+      }
+
+      this.positionCamera(this.currentBearing);
+      this.needsRender = true;
+    });
+    // /TODO
   }
 
   start() {
@@ -448,7 +508,10 @@ export default class Canvas {
       }
 
       if (this.isOrbital === false && this.isExplore === false) {
-        this.positionCamera(displayBearing);
+        this.currentBearing = this.currentBearing || displayBearing;
+        if (!this.isFlying) {
+          this.positionCamera(displayBearing);
+        }
       } else {
         this.controls.update();
       }
