@@ -85,8 +85,7 @@ export default class Canvas {
 
     this.setSize(width, height);
     this.renderer.setPixelRatio(pixelRatio);
-    console.log("edges", edges);
-    console.log("nodes", nodes);
+
     // Force layout
     this.simulation = forceSimulation(nodes, 3)
       .force("link", forceLink(edges).distance(30))
