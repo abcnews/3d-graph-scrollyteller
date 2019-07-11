@@ -452,6 +452,7 @@ export default class Canvas {
       }
       rafRef = requestAnimationFrame(loop);
       renderer.render(this.scene, this.camera);
+      this.needsRender = false;
       if (typeof this.onRenderCallback === "function") {
         this.onRenderCallback({
           camera: { position: this.camera.position },
