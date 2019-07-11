@@ -133,10 +133,8 @@ export default class Canvas {
       const label = document.createElement("div");
       label.className = styles.label;
       document.querySelector("#relativeParent").appendChild(label);
-      label.innerText = node.label;
+      label.innerText = node.shortLabel || node.label;
       node.labelElement = label;
-
-      
     });
 
     // Using css max-width leaves width as max-width
