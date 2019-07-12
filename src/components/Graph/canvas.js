@@ -586,29 +586,27 @@ export default class Canvas {
 
     const { nodeRadius } = this.opts;
 
-    const nodes = this.nodes
-      .map(n => {
-        const { x, y, z } = n;
-        const opacity = n.groups.reduce(
-          opacityReducer(config),
-          this.opts.minOpacity
-        );
+    const points = this.nodes.map(n => {
+      const { x, y, z } = n;
+      const opacity = n.groups.reduce(
+        opacityReducer(config),
+        this.opts.minOpacity
+      );
 
-        return {
-          point: new Vector3(x, y, z),
-          isVisible: opacity > this.opts.visibilityThreshold
-        };
-      })
-      .filter(n => n.isVisible);
-
-    // Make sure there's something to use for the origin.
-    if (nodes.length === 0) {
-      nodes.push(...this.nodes);
-    }
+      return {
+        point: new Vector3(x, y, z),
+        isVisible: opacity > this.opts.visibilityThreshold
+      };
+    });
+    const visiblePoints = points.filter(p => p.isVisible);
 
     const bounds = new Box3();
     const dims = new Vector3();
-    bounds.setFromPoints(nodes.map(n => n.point));
+    bounds.setFromPoints(
+      visiblePoints.length
+        ? visiblePoints.map(n => n.point)
+        : points.map(n => n.point)
+    );
     bounds.getSize(dims);
 
     const width = Math.max(dims.x, nodeRadius * 7);
