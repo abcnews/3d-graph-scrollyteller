@@ -34,7 +34,7 @@
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "spanify": "^1.4.0",
-    "three": "^0.105.2",
+    "three": "^0.137.0",
     "three.meshline": "^1.2.0"
   }
 }
